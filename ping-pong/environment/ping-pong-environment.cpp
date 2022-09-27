@@ -46,6 +46,10 @@ const unsigned nInputs = 3 * nSpatialZones + 2 * nVelocityZones + nRelPos * nRel
 
 const float rAction = 1.F / nSpatialZones;
 
+const float rStateFiringFrequency = 0.3F;
+
+#define SIGNAL_ON (rng() < rStateFiringFrequency ? 1 : 0)
+
 class RandomNumberGenerator
 {
 	uniform_real_distribution<> urd;
@@ -175,17 +179,17 @@ protected:
 		indvyBall = vr_PhaseSpacePoint[3] < 0 ? nVelocityZones / 2 - indvyBall : nVelocityZones / 2 + indvyBall;
 		int indRacket = (int)((vr_PhaseSpacePoint[4] + 0.5) / (1. / nSpatialZones));
 		vector<char> vb_Spikes(nInputs, 0);
-		vb_Spikes[indxBall] = 1;
-		vb_Spikes[nSpatialZones + indyBall] = 1;
-		vb_Spikes[nSpatialZones * 2 + indvxBall] = 1;
-		vb_Spikes[nSpatialZones * 2 + nVelocityZones + indvxBall] = 1;
-		vb_Spikes[nSpatialZones * 2 + nVelocityZones * 2 + indRacket] = 1;
+		vb_Spikes[indxBall] = SIGNAL_ON;
+		vb_Spikes[nSpatialZones + indyBall] = SIGNAL_ON;
+		vb_Spikes[nSpatialZones * 2 + indvxBall] = SIGNAL_ON;
+		vb_Spikes[nSpatialZones * 2 + nVelocityZones + indvxBall] = SIGNAL_ON;
+		vb_Spikes[nSpatialZones * 2 + nVelocityZones * 2 + indRacket] = SIGNAL_ON;
 		if (indxBall < nRelPos) {
 			int indyRel = indyBall - indRacket;
 			if (abs(indyRel) <= (nRelPos - 1) / 2) {
 				indyRel += (nRelPos - 1) / 2;
 				int indRaster = indyRel * nRelPos + indxBall;
-				vb_Spikes[nSpatialZones * 3 + nVelocityZones * 2 + indRaster] = 1;
+				vb_Spikes[nSpatialZones * 3 + nVelocityZones * 2 + indRaster] = SIGNAL_ON;
 			}
 		}
 		for (auto i: vb_Spikes) {
