@@ -270,14 +270,50 @@ public:
 	}
 };
 
+class DYNAMIC_LIBRARY_EXPORTED_CLASS AdaptivePoisson: public IReceptors
+{
+public:
+	AdaptivePoisson(int nReceptors) : IReceptors(nReceptors) {}
+	virtual bool bGenerateReceptorSignals(char *prec, size_t neuronstrsize) override
+	{
+		if (!bReward) {
+			if (es.pprr_Ball->first < -0.5F) {
+				*prec = 1;
+				--RewardPunishmentBalance;
+			}
+			else *prec = 0;
+		}
+		else if (es.pprr_Ball->first == -0.5F) {
+			*prec = 1;
+			++RewardPunishmentBalance;
+		}
+		else *prec = 0;
+		return true;
+	}
+	virtual void Randomize(void) override {};
+	virtual void SaveStatus(Serializer &ser) const override
+	{
+		IReceptors::SaveStatus(ser);
+		ser << bReward;
+	}
+	virtual ~Evaluator() = default;
+	void LoadStatus(Serializer &ser)
+	{
+		IReceptors::LoadStatus(ser);
+		ser >> bReward;
+	}
+};
+
 PING_PONG_ENVIRONMENT_EXPORT IReceptors *SetParametersIn(int &nReceptors, const pugi::xml_node &xn)
 {
 	static int CallNo = 0;
 	switch (CallNo++) {
 		case 0: nReceptors = nInputs;
 				return new rec_ping_pong;
-		case 1: return new Evaluator(false);
-		case 2: return new Evaluator(true);
+		case 1: nReceptors = 1;
+			    return new Evaluator(false);
+		case 2: nReceptors = 1;
+			    return new Evaluator(true);
 		default: cout << "Too many calls of SetParametersIn\n";
 				exit(-1);
 	}
