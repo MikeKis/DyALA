@@ -238,25 +238,38 @@ int ntact = 0;
 
 int RewardPunishmentBalance = 0;
 
+const int RewardTrainLength = 10;
+const int RewardTrainPeriod = 2;
+
 class DYNAMIC_LIBRARY_EXPORTED_CLASS Evaluator: public IReceptors
 {
 	bool bReward;
+	int  TrainCounter;
+	int  PeriodCounter;
 public:
 	Evaluator(bool bRew) : IReceptors(1), bReward(bRew) {}
 	virtual bool bGenerateReceptorSignals(char *prec, size_t neuronstrsize) override
 	{
 		if (!bReward) {
 			if (es.pprr_Ball->first < -0.5F) {
-				*prec = 1;
+				TrainCounter = RewardTrainLength;
+				PeriodCounter = 1;
 				--RewardPunishmentBalance;
-			} else *prec = 0;
+			}
 		} else if (es.pprr_Ball->first == -0.5F) {
-			*prec = 1;
+			TrainCounter = RewardTrainLength;
+			PeriodCounter = 1;
 			++RewardPunishmentBalance;
-		} else *prec = 0;
+		}
+		*prec = 0;
+		if (TrainCounter && !--PeriodCounter) {
+			*prec = 1;
+			PeriodCounter = RewardTrainPeriod;
+			--TrainCounter;
+		}
 		return true;
 	}
-	virtual void Randomize(void) override {};
+	virtual void Randomize(void) override {};  
 	virtual void SaveStatus(Serializer &ser) const override
 	{
 		IReceptors::SaveStatus(ser);
@@ -270,39 +283,56 @@ public:
 	}
 };
 
+const float rBasicPoissonFrequency = 0.03F;
+const float rMinTargetNetworkActivity = 0.01F;
+
 class DYNAMIC_LIBRARY_EXPORTED_CLASS AdaptivePoisson: public IReceptors
 {
+	bool bActionWasForcedbyNoise;
 public:
-	AdaptivePoisson(int nReceptors) : IReceptors(nReceptors) {}
+	AdaptivePoisson() {}
+	AdaptivePoisson(int nReceptors): IReceptors(nReceptors), rCurrentFrequency(rBasicPoissonFrequency / nReceptors), bActionWasForcedbyNoise(false) {}
+
+	float rCurrentFrequency;
+
 	virtual bool bGenerateReceptorSignals(char *prec, size_t neuronstrsize) override
 	{
-		if (!bReward) {
-			if (es.pprr_Ball->first < -0.5F) {
+		rCurrentFrequency += rBasicPoissonFrequency * rMinTargetNetworkActivity;
+		if (rCurrentFrequency > rBasicPoissonFrequency)
+			rCurrentFrequency = rBasicPoissonFrequency;
+		FORI(nReceptors()) {
+			if (rng() < rCurrentFrequency) {
 				*prec = 1;
-				--RewardPunishmentBalance;
-			}
-			else *prec = 0;
+				bActionWasForcedbyNoise = true;
+			} else *prec = 0;
+			prec += neuronstrsize;
 		}
-		else if (es.pprr_Ball->first == -0.5F) {
-			*prec = 1;
-			++RewardPunishmentBalance;
-		}
-		else *prec = 0;
 		return true;
 	}
-	virtual void Randomize(void) override {};
+	virtual void Randomize(void) override {}   // It was randomized by rec_ping_pong
 	virtual void SaveStatus(Serializer &ser) const override
 	{
 		IReceptors::SaveStatus(ser);
-		ser << bReward;
+		ser << rCurrentFrequency;
+		ser << bActionWasForcedbyNoise;
 	}
-	virtual ~Evaluator() = default;
+	virtual ~AdaptivePoisson() = default;
+
 	void LoadStatus(Serializer &ser)
 	{
 		IReceptors::LoadStatus(ser);
-		ser >> bReward;
+		ser >> rCurrentFrequency;
+		ser >> bActionWasForcedbyNoise;
+	}
+	void RegisterAction()
+	{
+		if (bActionWasForcedbyNoise)
+			bActionWasForcedbyNoise = false;
+		else rCurrentFrequency -= rBasicPoissonFrequency;
 	}
 };
+
+AdaptivePoisson *papG;
 
 PING_PONG_ENVIRONMENT_EXPORT IReceptors *SetParametersIn(int &nReceptors, const pugi::xml_node &xn)
 {
@@ -314,6 +344,7 @@ PING_PONG_ENVIRONMENT_EXPORT IReceptors *SetParametersIn(int &nReceptors, const 
 			    return new Evaluator(false);
 		case 2: nReceptors = 1;
 			    return new Evaluator(true);
+		case 3: return papG = new AdaptivePoisson(nReceptors);
 		default: cout << "Too many calls of SetParametersIn\n";
 				exit(-1);
 	}
@@ -334,7 +365,10 @@ PING_PONG_ENVIRONMENT_EXPORT IReceptors *LoadStatus(Serializer &ser)
 		case 2: peva = new Evaluator(true);
 				peva->LoadStatus(ser);
 				return peva;
-		default: cout << "Too many calls of SetParametersIn\n";
+		case 3: papG = new AdaptivePoisson(true);
+				papG->LoadStatus(ser);
+				return papG;
+		default: cout << "Too many calls of LoadStatus\n";
 				exit(-1);
 	}
 }
@@ -343,8 +377,10 @@ PING_PONG_ENVIRONMENT_EXPORT void SetParametersOut(int ExperimentId, size_t tact
 
 PING_PONG_ENVIRONMENT_EXPORT bool ObtainOutputSpikes(const vector<int> &v_Firing, int nEquilibriumPeriods)
 {
-	if (v_Firing.size())
+	if (v_Firing.size()) {
 		*es.prRacket += v_Firing.front() ? rAction : -rAction;
+		papG->RegisterAction();
+	}
 	return true;
 }
 
