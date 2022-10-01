@@ -7,6 +7,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ping-pong", "ping-pong", "{
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ping-pong-environment", "ping-pong\environment\ping-pong-environment.vcxproj", "{DE9FB339-F300-4A48-B8E1-90C90FE2FF54}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ping-pong-visualizer", "ping-pong\ping-pong-visualizer\ping-pong-visualizer.vcxproj", "{75DB5C70-586C-4AF0-AC02-4F08895C3663}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -23,12 +25,21 @@ Global
 		{DE9FB339-F300-4A48-B8E1-90C90FE2FF54}.Release|x64.Build.0 = Release|x64
 		{DE9FB339-F300-4A48-B8E1-90C90FE2FF54}.Release|x86.ActiveCfg = Release|Win32
 		{DE9FB339-F300-4A48-B8E1-90C90FE2FF54}.Release|x86.Build.0 = Release|Win32
+		{75DB5C70-586C-4AF0-AC02-4F08895C3663}.Debug|x64.ActiveCfg = Debug|x64
+		{75DB5C70-586C-4AF0-AC02-4F08895C3663}.Debug|x64.Build.0 = Debug|x64
+		{75DB5C70-586C-4AF0-AC02-4F08895C3663}.Debug|x86.ActiveCfg = Debug|Win32
+		{75DB5C70-586C-4AF0-AC02-4F08895C3663}.Debug|x86.Build.0 = Debug|Win32
+		{75DB5C70-586C-4AF0-AC02-4F08895C3663}.Release|x64.ActiveCfg = Release|x64
+		{75DB5C70-586C-4AF0-AC02-4F08895C3663}.Release|x64.Build.0 = Release|x64
+		{75DB5C70-586C-4AF0-AC02-4F08895C3663}.Release|x86.ActiveCfg = Release|Win32
+		{75DB5C70-586C-4AF0-AC02-4F08895C3663}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{DE9FB339-F300-4A48-B8E1-90C90FE2FF54} = {72A50BE0-2104-46C5-BFAD-8A492FB1FB4D}
+		{75DB5C70-586C-4AF0-AC02-4F08895C3663} = {72A50BE0-2104-46C5-BFAD-8A492FB1FB4D}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0F88527E-26F8-43E0-A8C6-C3CB689440BD}
