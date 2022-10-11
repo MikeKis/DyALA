@@ -172,12 +172,18 @@ protected:
 		vector<float> vr_PhaseSpacePoint(5);
 		UpdateWorld(vr_PhaseSpacePoint);
 		int indxBall = (int)((vr_PhaseSpacePoint[0] + 0.5) / (1. / nSpatialZones));
+		if (indxBall == nSpatialZones)
+			indxBall = nSpatialZones - 1;
 		int indyBall = (int)((vr_PhaseSpacePoint[1] + 0.5) / (1. / nSpatialZones));
-		int indvxBall = lower_bound(vr_VelocityZoneBoundary.begin(), vr_VelocityZoneBoundary.end(), abs(vr_PhaseSpacePoint[2])) - vr_VelocityZoneBoundary.begin();
+		if (indyBall == nSpatialZones)
+			indyBall = nSpatialZones - 1;
+		int indvxBall = (int)(lower_bound(vr_VelocityZoneBoundary.begin(), vr_VelocityZoneBoundary.end(), abs(vr_PhaseSpacePoint[2])) - vr_VelocityZoneBoundary.begin());
 		indvxBall = vr_PhaseSpacePoint[2] < 0 ? nVelocityZones / 2 - indvxBall : nVelocityZones / 2 + indvxBall;
-		int indvyBall = lower_bound(vr_VelocityZoneBoundary.begin(), vr_VelocityZoneBoundary.end(), abs(vr_PhaseSpacePoint[3])) - vr_VelocityZoneBoundary.begin();
+		int indvyBall = (int)(lower_bound(vr_VelocityZoneBoundary.begin(), vr_VelocityZoneBoundary.end(), abs(vr_PhaseSpacePoint[3])) - vr_VelocityZoneBoundary.begin());
 		indvyBall = vr_PhaseSpacePoint[3] < 0 ? nVelocityZones / 2 - indvyBall : nVelocityZones / 2 + indvyBall;
 		int indRacket = (int)((vr_PhaseSpacePoint[4] + 0.5) / (1. / nSpatialZones));
+		if (indRacket == nSpatialZones)
+			indRacket = nSpatialZones - 1;
 		vector<char> vb_Spikes(nInputs, 0);
 		vb_Spikes[indxBall] = SIGNAL_ON;
 		vb_Spikes[nSpatialZones + indyBall] = SIGNAL_ON;
@@ -378,7 +384,15 @@ PING_PONG_ENVIRONMENT_EXPORT void SetParametersOut(int ExperimentId, size_t tact
 PING_PONG_ENVIRONMENT_EXPORT bool ObtainOutputSpikes(const vector<int> &v_Firing, int nEquilibriumPeriods)
 {
 	if (v_Firing.size()) {
-		*es.prRacket += v_Firing.front() ? rAction : -rAction;
+		if (v_Firing.front()) {
+			*es.prRacket += rAction;
+			if (*es.prRacket > 0.5F)
+				*es.prRacket = 0.5F;
+		} else {
+			*es.prRacket -= rAction;
+			if (*es.prRacket < -0.5F)
+				*es.prRacket = -0.5F;
+		}
 		papG->RegisterAction();
 	}
 	return true;

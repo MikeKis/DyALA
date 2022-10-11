@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SNN>
+  <Global>0.787686</Global>
+  <!--NOT USED ???-->
+  <Receptors name="R" N="133">
+    <Implementation lib="ping-pong-environment"></Implementation>
+  </Receptors>
+  <Receptors name="Punishment" N="1">
+    <!--NOT USED NOW-->
+    <Implementation lib="ping-pong-environment"></Implementation>
+  </Receptors>
+  <Receptors name="Reward" N="1">
+    <Implementation lib="ping-pong-environment"></Implementation>
+  </Receptors>
+  <Receptors name="Poisson" N="200">
+    <Implementation lib="ping-pong-environment"></Implementation>
+  </Receptors>
+  <Receptors name="SubthresholdPoisson" N="300">
+    <Implementation lib="fromFile">
+      <args>
+        <Noise>0.01</Noise>
+      </args>
+    </Implementation>
+  </Receptors>
+  <Network>
+    <Implementation lib="DyALA">
+      <args>
+        <NACTIONS>2</NACTIONS>
+        <NLNEURONSPERACTION>100</NLNEURONSPERACTION>
+        <NDOPAMINESOURCES>300</NDOPAMINESOURCES>
+        <NSTATERECOGNIZERS>30</NSTATERECOGNIZERS>
+      </args>
+    </Implementation>
+  </Network>
+   <Readout lib="ping-pong-environment">
+    <output>L</output>
+  </Readout>
+</SNN>  
