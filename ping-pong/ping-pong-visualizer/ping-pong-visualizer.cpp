@@ -8,7 +8,7 @@
 
 #include "../environment/ping-pong-environment.h"
 
-#define RASTER_HALFSIZE 100   // It is for the range [0, 1] while the whole picture range is [-1, 1].
+#define RASTER_SIZE 200   // It is for the range [0, 1] while the whole picture range is [-1, 1].
 #define SPOT_HALFSIZE_PIXEL 10
 
 using namespace std;
@@ -55,8 +55,8 @@ public:
 	~EnvironmentState() {}
 };
 
-inline float rPixelX(float rPhysical) {return (rPhysical + 1.F) * RASTER_HALFSIZE;}
-inline float rPixelY(float rPhysical) {return (rPhysical + 1.F) * RASTER_HALFSIZE;}
+inline float rPixelX(float rPhysical) {return (rPhysical + 0.5F) * RASTER_SIZE;}
+inline float rPixelY(float rPhysical) {return (rPhysical + 0.5F) * RASTER_SIZE;}
 
 int main(int ARGC, char *ARGV[])
 {
@@ -69,14 +69,14 @@ int main(int ARGC, char *ARGV[])
 	}
 	cout << "ping-pong data are obtained\n";
 	// Create the main window
-	sf::RenderWindow window(sf::VideoMode(RASTER_HALFSIZE * 2, RASTER_HALFSIZE * 2), "ping-pong", sf::Style::Close);
+	sf::RenderWindow window(sf::VideoMode(RASTER_SIZE, RASTER_SIZE), "ping-pong", sf::Style::Close);
 	sf::CircleShape circle;
 	circle.setRadius(SPOT_HALFSIZE_PIXEL);
 	circle.setFillColor(sf::Color::White);
 	circle.setOrigin(SPOT_HALFSIZE_PIXEL, SPOT_HALFSIZE_PIXEL);
 	sf::RectangleShape rectangle;
-	rectangle.setSize(sf::Vector2f(3, RACKET_SIZE * RASTER_HALFSIZE));
-	rectangle.setOrigin(0, RACKET_SIZE / 2 * RASTER_HALFSIZE);
+	rectangle.setSize(sf::Vector2f(3, RACKET_SIZE * RASTER_SIZE));
+	rectangle.setOrigin(0, RACKET_SIZE / 2 * RASTER_SIZE);
 	rectangle.setFillColor(sf::Color::White);
 
 	// Start the game loop
