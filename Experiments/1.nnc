@@ -33,6 +33,6 @@
     </Implementation>
   </Network>
    <Readout lib="ping-pong-environment">
-    <output>L</output>
+    <output>OREFF</output>
   </Readout>
 </SNN>  

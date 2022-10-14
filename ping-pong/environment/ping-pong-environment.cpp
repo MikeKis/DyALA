@@ -120,8 +120,11 @@ void EnvironmentState::ResetBall()
 	es.pprr_Ball->first = 0.F;
 	es.pprr_Ball->second = (float)(-0.5 + rng());
 	float rBallVelocity = rMakeBallVelocity();
-	float rBallMovementDirection = (float)rng(2 * M_PI);
-	prr_BallSpeed.first = rBallVelocity * sin(rBallMovementDirection);
+	float rBallMovementDirection;
+	do {
+		rBallMovementDirection = (float)rng(2 * M_PI);
+		prr_BallSpeed.first = rBallVelocity * sin(rBallMovementDirection);
+	} while (prr_BallSpeed.first < 1. / (2 * maxSpotPassageTime_ms));
 	prr_BallSpeed.second = rBallVelocity * cos(rBallMovementDirection);
 }
 
@@ -383,15 +386,15 @@ PING_PONG_ENVIRONMENT_EXPORT void SetParametersOut(int ExperimentId, size_t tact
 
 PING_PONG_ENVIRONMENT_EXPORT bool ObtainOutputSpikes(const vector<int> &v_Firing, int nEquilibriumPeriods)
 {
-	if (v_Firing.size()) {
+	if (v_Firing.size() == 1) {
 		if (v_Firing.front()) {
 			*es.prRacket += rAction;
-			if (*es.prRacket > 0.5F)
-				*es.prRacket = 0.5F;
+			if (*es.prRacket > 0.5F - RACKET_SIZE / 2)
+				*es.prRacket = 0.5F - RACKET_SIZE / 2;
 		} else {
 			*es.prRacket -= rAction;
-			if (*es.prRacket < -0.5F)
-				*es.prRacket = -0.5F;
+			if (*es.prRacket < -0.5F + RACKET_SIZE / 2)
+				*es.prRacket = -0.5F + RACKET_SIZE / 2;
 		}
 		papG->RegisterAction();
 	}
