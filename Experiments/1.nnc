@@ -15,10 +15,10 @@
   <Receptors name="Poisson" N="200">
     <Implementation lib="ping-pong-environment"></Implementation>
   </Receptors>
-  <Receptors name="SubthresholdPoisson" N="300">
+  <Receptors name="IPoisson" N="300">
     <Implementation lib="fromFile">
       <args>
-        <Noise>0.01</Noise>
+        <Noise>0.03</Noise>
       </args>
     </Implementation>
   </Receptors>

@@ -42,6 +42,7 @@ const unsigned maxSpotPassageTime_ms = 1000;
 const unsigned nSpatialZones = 30;
 const unsigned nVelocityZones = 9;
 const unsigned nRelPos = 5;
+const unsigned RelPosStep = (unsigned)round(RACKET_SIZE / (3. / nSpatialZones));
 const unsigned nInputs = 3 * nSpatialZones + 2 * nVelocityZones + nRelPos * nRelPos;
 
 const float rAction = 1.F / nSpatialZones;
@@ -193,11 +194,12 @@ protected:
 		vb_Spikes[nSpatialZones * 2 + indvxBall] = SIGNAL_ON;
 		vb_Spikes[nSpatialZones * 2 + nVelocityZones + indvxBall] = SIGNAL_ON;
 		vb_Spikes[nSpatialZones * 2 + nVelocityZones * 2 + indRacket] = SIGNAL_ON;
-		if (indxBall < nRelPos) {
-			int indyRel = indyBall - indRacket;
+		int indxRel = indxBall / RelPosStep;
+		if (indxRel < nRelPos) {
+			int indyRel = (indyBall - indRacket) / RelPosStep;
 			if (abs(indyRel) <= (nRelPos - 1) / 2) {
 				indyRel += (nRelPos - 1) / 2;
-				int indRaster = indyRel * nRelPos + indxBall;
+				int indRaster = indyRel * nRelPos + indxRel;
 				vb_Spikes[nSpatialZones * 3 + nVelocityZones * 2 + indRaster] = SIGNAL_ON;
 			}
 		}
