@@ -210,6 +210,43 @@ protected:
 		}
 		return true;
 	}
+	virtual void GetMeanings(VECTOR<STRING> &vstr_Meanings) const 
+	{
+		vstr_Meanings.resize(nInputs);
+		int i = 0;
+		int x, y;
+		for (x = 0; x < nSpatialZones; ++x) {
+			stringstream ss;
+			ss << "x" << x;
+			vstr_Meanings[i++] = ss.str();
+		}
+		for (x = 0; x < nSpatialZones; ++x) {
+			stringstream ss;
+			ss << "y" << x;
+			vstr_Meanings[i++] = ss.str();
+		}
+		for (x = 0; x < nVelocityZones; ++x) {
+			stringstream ss;
+			ss << "vx" << x - nVelocityZones / 2;
+			vstr_Meanings[i++] = ss.str();
+		}
+		for (x = 0; x < nVelocityZones; ++x) {
+			stringstream ss;
+			ss << "vy" << x - nVelocityZones / 2;
+			vstr_Meanings[i++] = ss.str();
+		}
+		for (x = 0; x < nSpatialZones; ++x) {
+			stringstream ss;
+			ss << "ry" << x;
+			vstr_Meanings[i++] = ss.str();
+		}
+		for (y = nRelPos / 2; y >= -nRelPos / 2; --y)
+			for (x = 0; x < nRelPos; ++x) {
+				stringstream ss;
+				ss << "REL(" << x << "," << y << ")";
+				vstr_Meanings[i++] = ss.str();
+			}
+	}
 public:
 	rec_ping_pong(): IReceptors(nInputs), vr_VelocityZoneBoundary((nVelocityZones - 1) / 2)
 	{
@@ -258,6 +295,12 @@ class DYNAMIC_LIBRARY_EXPORTED_CLASS Evaluator: public IReceptors
 	bool bReward;
 	int  TrainCounter;
 	int  PeriodCounter;
+protected:
+	virtual void GetMeanings(VECTOR<STRING> &vstr_Meanings) const
+	{
+		vstr_Meanings.resize(1);
+		vstr_Meanings.front() = bReward ? "REW" : "PUN";
+	}
 public:
 	Evaluator(bool bRew) : IReceptors(1), bReward(bRew) {}
 	virtual bool bGenerateReceptorSignals(char *prec, size_t neuronstrsize) override
@@ -383,94 +426,6 @@ PING_PONG_ENVIRONMENT_EXPORT IReceptors *LoadStatus(Serializer &ser)
 		default: cout << "Too many calls of LoadStatus\n";
 				exit(-1);
 	}
-}
-
-string strInputMeaning(int ind)
-{
-	static vector<string> vstr_Meanings;
-	if (vstr_Meanings.empty()) {
-		vstr_Meanings.resize(nInputs);
-		int i = 0;
-		int x, y;
-		for (x = 0; x < nSpatialZones; ++x) {
-			stringstream ss;
-			ss << "x" << x;
-			vstr_Meanings[i++] = ss.str();
-		}
-		for (x = 0; x < nSpatialZones; ++x) {
-			stringstream ss;
-			ss << "y" << x;
-			vstr_Meanings[i++] = ss.str();
-		}
-		for (x = 0; x < nVelocityZones; ++x) {
-			stringstream ss;
-			ss << "vx" << x - nVelocityZones / 2;
-			vstr_Meanings[i++] = ss.str();
-		}
-		for (x = 0; x < nVelocityZones; ++x) {
-			stringstream ss;
-			ss << "vy" << x - nVelocityZones / 2;
-			vstr_Meanings[i++] = ss.str();
-		}
-		for (x = 0; x < nSpatialZones; ++x) {
-			stringstream ss;
-			ss << "ry" << x;
-			vstr_Meanings[i++] = ss.str();
-		}
-		for (y = nRelPos / 2; y >= -nRelPos / 2; --y)
-			for (x = 0; x < nRelPos; ++x) {
-				stringstream ss;
-				ss << "REL(" << x << "," << y << ")";
-				vstr_Meanings[i++] = ss.str();
-			}
-	}
-	return vstr_Meanings[ind];
-}
-
-void RMeanings(const vector<vector<pair<int, int> > > &vvp_Synapses, vector<string> &vstr_Meanings)
-{
-	int i = 0;
-	for (auto &j: vstr_Meanings)
-		j = strInputMeaning(i++);
-}
-
-void RewardMeanings(const std::vector<std::vector<std::pair<int, int> > > &vvp_Synapses, std::vector<std::string> &vstr_Meanings) {vstr_Meanings[0] = "REW";}
-void PunishmentMeanings(const std::vector<std::vector<std::pair<int, int> > > &vvp_Synapses, std::vector<std::string> &vstr_Meanings) {vstr_Meanings[0] = "PUN";}
-void REWNORMMeanings(const std::vector<std::vector<std::pair<int, int> > > &vvp_Synapses, std::vector<std::string> &vstr_Meanings) {vstr_Meanings[0] = "REWNORM";}
-
-void REWGATEMeanings(const std::vector<std::vector<std::pair<int, int> > > &vvp_Synapses, std::vector<std::string> &vstr_Meanings) 
-{ 
-	int i = 0;
-	for (auto &j: vstr_Meanings) {
-		stringstream ss;
-		ss << "GATE" << i++;
-		j = ss.str();
-	}
-}
-
-void LREWMeanings(const std::vector<std::vector<std::pair<int, int> > > &vvp_Synapses, std::vector<std::string> &vstr_Meanings)
-{
-	FORI(vstr_Meanings.size()) {
-		stringstream ss;
-		ss << 'L' << _i;
-		for (auto i: vvp_Synapses[_i])
-			if (i.second > 0 && i.first < 0) {
-				int rec = -1 - i.first;
-				ss << '_' << strInputMeaning(rec);
-			}
-		vstr_Meanings[_i] = ss.str();
-	}
-}
-
-PING_PONG_ENVIRONMENT_EXPORT void SetMeaningDefinitions(vector<pair<const char *, pfnsetmeanings> > &vppchfsm_)
-{
-	vppchfsm_.clear();
-	vppchfsm_.push_back(pair<const char *, pfnsetmeanings>("R", RMeanings));
-	vppchfsm_.push_back(pair<const char *, pfnsetmeanings>("Reward", RewardMeanings));
-	vppchfsm_.push_back(pair<const char *, pfnsetmeanings>("Punishment", PunishmentMeanings));
-	vppchfsm_.push_back(pair<const char *, pfnsetmeanings>("REWNORM", REWNORMMeanings));
-	vppchfsm_.push_back(pair<const char *, pfnsetmeanings>("REWGATE", REWGATEMeanings));
-	vppchfsm_.push_back(pair<const char *, pfnsetmeanings>("LREW", LREWMeanings));
 }
 
 PING_PONG_ENVIRONMENT_EXPORT void SetParametersOut(int ExperimentId, size_t tactTermination, unsigned nOutputNeurons, const pugi::xml_node &xn) {}
