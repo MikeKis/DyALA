@@ -15,7 +15,7 @@
   <Receptors name="Poisson" N="200">
     <Implementation lib="ping-pong-environment"></Implementation>
   </Receptors>
-  <Receptors name="IPoisson" N="300">
+  <Receptors name="IPoisson" N="150">
     <Implementation lib="fromFile">
       <args>
         <Noise>0.03</Noise>
@@ -27,8 +27,7 @@
       <args>
         <NACTIONS>2</NACTIONS>
         <NLNEURONSPERACTION>100</NLNEURONSPERACTION>
-        <NDOPAMINESOURCES>300</NDOPAMINESOURCES>
-        <NSTATERECOGNIZERS>30</NSTATERECOGNIZERS>
+        <NPRIMARYSTATERECOGNIZERS>10</NPRIMARYSTATERECOGNIZERS>
       </args>
     </Implementation>
   </Network>

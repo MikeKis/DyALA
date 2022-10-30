@@ -20,6 +20,7 @@ Emulates signal from videocamera looking at a moving light spot.
 #include <boost/interprocess/mapped_region.hpp>
 
 #include <sg/sg.h>
+#include <NetworkConfigurator.h>
 
 #include "ping-pong-environment.h"
 
@@ -41,7 +42,7 @@ const unsigned maxSpotPassageTime_ms = 1000;
 
 const unsigned nSpatialZones = 30;
 const unsigned nVelocityZones = 9;
-const unsigned nRelPos = 5;
+const int nRelPos = 5;
 const unsigned RelPosStep = (unsigned)round(RACKET_SIZE / (3. / nSpatialZones));
 const unsigned nInputs = 3 * nSpatialZones + 2 * nVelocityZones + nRelPos * nRelPos;
 
@@ -382,6 +383,94 @@ PING_PONG_ENVIRONMENT_EXPORT IReceptors *LoadStatus(Serializer &ser)
 		default: cout << "Too many calls of LoadStatus\n";
 				exit(-1);
 	}
+}
+
+string strInputMeaning(int ind)
+{
+	static vector<string> vstr_Meanings;
+	if (vstr_Meanings.empty()) {
+		vstr_Meanings.resize(nInputs);
+		int i = 0;
+		int x, y;
+		for (x = 0; x < nSpatialZones; ++x) {
+			stringstream ss;
+			ss << "x" << x;
+			vstr_Meanings[i++] = ss.str();
+		}
+		for (x = 0; x < nSpatialZones; ++x) {
+			stringstream ss;
+			ss << "y" << x;
+			vstr_Meanings[i++] = ss.str();
+		}
+		for (x = 0; x < nVelocityZones; ++x) {
+			stringstream ss;
+			ss << "vx" << x - nVelocityZones / 2;
+			vstr_Meanings[i++] = ss.str();
+		}
+		for (x = 0; x < nVelocityZones; ++x) {
+			stringstream ss;
+			ss << "vy" << x - nVelocityZones / 2;
+			vstr_Meanings[i++] = ss.str();
+		}
+		for (x = 0; x < nSpatialZones; ++x) {
+			stringstream ss;
+			ss << "ry" << x;
+			vstr_Meanings[i++] = ss.str();
+		}
+		for (y = nRelPos / 2; y >= -nRelPos / 2; --y)
+			for (x = 0; x < nRelPos; ++x) {
+				stringstream ss;
+				ss << "REL(" << x << "," << y << ")";
+				vstr_Meanings[i++] = ss.str();
+			}
+	}
+	return vstr_Meanings[ind];
+}
+
+void RMeanings(const vector<vector<pair<int, int> > > &vvp_Synapses, vector<string> &vstr_Meanings)
+{
+	int i = 0;
+	for (auto &j: vstr_Meanings)
+		j = strInputMeaning(i++);
+}
+
+void RewardMeanings(const std::vector<std::vector<std::pair<int, int> > > &vvp_Synapses, std::vector<std::string> &vstr_Meanings) {vstr_Meanings[0] = "REW";}
+void PunishmentMeanings(const std::vector<std::vector<std::pair<int, int> > > &vvp_Synapses, std::vector<std::string> &vstr_Meanings) {vstr_Meanings[0] = "PUN";}
+void REWNORMMeanings(const std::vector<std::vector<std::pair<int, int> > > &vvp_Synapses, std::vector<std::string> &vstr_Meanings) {vstr_Meanings[0] = "REWNORM";}
+
+void REWGATEMeanings(const std::vector<std::vector<std::pair<int, int> > > &vvp_Synapses, std::vector<std::string> &vstr_Meanings) 
+{ 
+	int i = 0;
+	for (auto &j: vstr_Meanings) {
+		stringstream ss;
+		ss << "GATE" << i++;
+		j = ss.str();
+	}
+}
+
+void LREWMeanings(const std::vector<std::vector<std::pair<int, int> > > &vvp_Synapses, std::vector<std::string> &vstr_Meanings)
+{
+	FORI(vstr_Meanings.size()) {
+		stringstream ss;
+		ss << 'L' << _i;
+		for (auto i: vvp_Synapses[_i])
+			if (i.second > 0 && i.first < 0) {
+				int rec = -1 - i.first;
+				ss << '_' << strInputMeaning(rec);
+			}
+		vstr_Meanings[_i] = ss.str();
+	}
+}
+
+PING_PONG_ENVIRONMENT_EXPORT void SetMeaningDefinitions(vector<pair<const char *, pfnsetmeanings> > &vppchfsm_)
+{
+	vppchfsm_.clear();
+	vppchfsm_.push_back(pair<const char *, pfnsetmeanings>("R", RMeanings));
+	vppchfsm_.push_back(pair<const char *, pfnsetmeanings>("Reward", RewardMeanings));
+	vppchfsm_.push_back(pair<const char *, pfnsetmeanings>("Punishment", PunishmentMeanings));
+	vppchfsm_.push_back(pair<const char *, pfnsetmeanings>("REWNORM", REWNORMMeanings));
+	vppchfsm_.push_back(pair<const char *, pfnsetmeanings>("REWGATE", REWGATEMeanings));
+	vppchfsm_.push_back(pair<const char *, pfnsetmeanings>("LREW", LREWMeanings));
 }
 
 PING_PONG_ENVIRONMENT_EXPORT void SetParametersOut(int ExperimentId, size_t tactTermination, unsigned nOutputNeurons, const pugi::xml_node &xn) {}
