@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <SNN>
-  <Global>0.787686</Global>
+  <Global>0</Global>
   <!--NOT USED ???-->
   <Receptors name="R" N="133">
     <Implementation lib="ping-pong-environment"></Implementation>

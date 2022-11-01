@@ -56,7 +56,7 @@ public:
 };
 
 inline float rPixelX(float rPhysical) {return (rPhysical + 0.5F) * RASTER_SIZE;}
-inline float rPixelY(float rPhysical) {return (rPhysical + 0.5F) * RASTER_SIZE;}
+inline float rPixelY(float rPhysical) {return (0.5F - rPhysical) * RASTER_SIZE;}
 
 int main(int ARGC, char *ARGV[])
 {

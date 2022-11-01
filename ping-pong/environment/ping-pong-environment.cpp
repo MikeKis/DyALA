@@ -41,7 +41,7 @@ const unsigned minSpotPassageTime_ms = 300;
 const unsigned maxSpotPassageTime_ms = 1000;
 
 const unsigned nSpatialZones = 30;
-const unsigned nVelocityZones = 9;
+const int nVelocityZones = 9;
 const int nRelPos = 5;
 const unsigned RelPosStep = (unsigned)round(RACKET_SIZE / (3. / nSpatialZones));
 const unsigned nInputs = 3 * nSpatialZones + 2 * nVelocityZones + nRelPos * nRelPos;
@@ -174,8 +174,12 @@ class DYNAMIC_LIBRARY_EXPORTED_CLASS rec_ping_pong: public IReceptors
 protected:
 	virtual bool bGenerateReceptorSignals(char *prec, size_t neuronstrsize) override
 	{
+		static ofstream ofsState("ping_pong_state.csv");
 		vector<float> vr_PhaseSpacePoint(5);
 		UpdateWorld(vr_PhaseSpacePoint);
+		for (auto z: vr_PhaseSpacePoint)
+			ofsState << z << ',';
+		ofsState << endl;
 		int indxBall = (int)((vr_PhaseSpacePoint[0] + 0.5) / (1. / nSpatialZones));
 		if (indxBall == nSpatialZones)
 			indxBall = nSpatialZones - 1;
@@ -193,11 +197,12 @@ protected:
 		vb_Spikes[indxBall] = SIGNAL_ON;
 		vb_Spikes[nSpatialZones + indyBall] = SIGNAL_ON;
 		vb_Spikes[nSpatialZones * 2 + indvxBall] = SIGNAL_ON;
-		vb_Spikes[nSpatialZones * 2 + nVelocityZones + indvxBall] = SIGNAL_ON;
+		vb_Spikes[nSpatialZones * 2 + nVelocityZones + indvyBall] = SIGNAL_ON;
 		vb_Spikes[nSpatialZones * 2 + nVelocityZones * 2 + indRacket] = SIGNAL_ON;
 		int indxRel = indxBall / RelPosStep;
 		if (indxRel < nRelPos) {
-			int indyRel = (indyBall - indRacket) / RelPosStep;
+			int indyRel = (indRacket - indyBall) / RelPosStep;   // Raster goes from top (higher y) to bottom - in opposite 
+			                                                     // direction to y axis
 			if (abs(indyRel) <= (nRelPos - 1) / 2) {
 				indyRel += (nRelPos - 1) / 2;
 				int indRaster = indyRel * nRelPos + indxRel;
@@ -283,8 +288,6 @@ public:
 	}
 };
 
-int ntact = 0;
-
 int RewardPunishmentBalance = 0;
 
 const int RewardTrainLength = 10;
@@ -338,7 +341,7 @@ public:
 	}
 };
 
-const float rBasicPoissonFrequency = 0.03F;
+const float rBasicPoissonFrequency = 0.01F;
 const float rMinTargetNetworkActivity = 0.01F;
 
 class DYNAMIC_LIBRARY_EXPORTED_CLASS AdaptivePoisson: public IReceptors
@@ -355,7 +358,7 @@ public:
 		rCurrentFrequency += rBasicPoissonFrequency * rMinTargetNetworkActivity;
 		if (rCurrentFrequency > rBasicPoissonFrequency)
 			rCurrentFrequency = rBasicPoissonFrequency;
-		FORI(nReceptors()) {
+		FORI(nReceptors) {
 			if (rng() < rCurrentFrequency) {
 				*prec = 1;
 				bActionWasForcedbyNoise = true;
