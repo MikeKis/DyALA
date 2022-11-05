@@ -6,3 +6,5 @@ SetParametersOut=?SetParametersOut@@YAXH_KIAEBVxml_node@pugi@@@Z
 ObtainOutputSpikes=?ObtainOutputSpikes@@YA_NAEBV?$vector@HV?$allocator@H@std@@@std@@H@Z
 Finalize=?Finalize@@YAHH@Z
 Serialize=?Serialize@@YAXAEAVSerializer@@_N@Z
+GetSections=?GetSections@@YAXAEBV?$vector@U?$pair@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@I@std@@V?$allocator@U?$pair@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@I@std@@@2@@std@@@Z
+ObtainSpikes=?ObtainSpikes@@YAXAEBV?$vector@HV?$allocator@H@std@@@std@@AEAV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@2@@Z

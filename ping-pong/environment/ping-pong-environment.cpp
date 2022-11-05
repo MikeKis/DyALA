@@ -293,6 +293,8 @@ int RewardPunishmentBalance = 0;
 const int RewardTrainLength = 10;
 const int RewardTrainPeriod = 2;
 
+bool b_forVerifier_Reward = false;
+
 class DYNAMIC_LIBRARY_EXPORTED_CLASS Evaluator: public IReceptors
 {
 	bool bReward;
@@ -318,6 +320,7 @@ public:
 			TrainCounter = RewardTrainLength;
 			PeriodCounter = 1;
 			++RewardPunishmentBalance;
+			b_forVerifier_Reward = true;
 		}
 		*prec = 0;
 		if (TrainCounter && !--PeriodCounter) {
@@ -450,5 +453,54 @@ PING_PONG_ENVIRONMENT_EXPORT bool ObtainOutputSpikes(const vector<int> &v_Firing
 	return true;
 }
 
-PING_PONG_ENVIRONMENT_EXPORT int Finalize(int OriginalTerminationCode) {return 5000 + RewardPunishmentBalance;}
+int ntact = 0;
+int LastRegistration = -1000000;
+int PostRewardCounter = 0;
+int nRecognitions = 0;
+int nCorr = 0;
+int nRewards = 0;
+
+PING_PONG_ENVIRONMENT_EXPORT int Finalize(int OriginalTerminationCode) 
+{
+	cout << "NRewards=" << nRewards << " nCorr=" << nCorr << " NRecognitions=" << nRecognitions << endl;
+	return 5000 + RewardPunishmentBalance;
+}
+
 PING_PONG_ENVIRONMENT_EXPORT void Serialize(Serializer &ser, bool bSave) {}
+
+vector<pair<string, unsigned> > vpstrn_sec;
+int nNeurons;
+pair<int, int> p_LREWRange;
+int indREWNORM;
+
+PING_PONG_ENVIRONMENT_EXPORT void GetSections(const vector<pair<string, unsigned> > &vpstrn_Sections)
+{
+	vpstrn_sec = vpstrn_Sections;
+	nNeurons = 0;
+	for (const auto &i: vpstrn_Sections) {
+		if (i.first == "LREW") {
+			p_LREWRange.first = nNeurons;
+			p_LREWRange.second = p_LREWRange.first + i.second;
+		} else if (i.first == "REWNORM")
+			indREWNORM = nNeurons;
+		nNeurons += i.second;
+	}
+}
+
+PING_PONG_ENVIRONMENT_EXPORT void ObtainSpikes(const vector<int> &v_Firing, string &strFatal)
+{
+	if (!PostRewardCounter && find(v_Firing.begin(), v_Firing.end(), indREWNORM) != v_Firing.end())
+		++nRecognitions;
+	if (!PostRewardCounter && any_of(v_Firing.begin(), v_Firing.end(), [=](int indneu) {return p_LREWRange.first <= indneu && indneu < p_LREWRange.second; }))
+		LastRegistration = ntact;
+	if (b_forVerifier_Reward) {
+		++nRewards;
+		if (ntact - LastRegistration < 100)
+			++nCorr;
+		PostRewardCounter = RewardTrainLength * RewardTrainPeriod;
+		b_forVerifier_Reward = false;
+	}
+	++ntact;
+	if (PostRewardCounter)
+		--PostRewardCounter;
+}
