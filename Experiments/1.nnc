@@ -22,6 +22,8 @@
       </args>
     </Implementation>
   </Receptors>
+  <Receptors name="Silent" N="300">
+  </Receptors>
   <Network>
     <Implementation lib="DyALA">
       <args>

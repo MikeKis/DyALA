@@ -9,30 +9,44 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ping-pong-environment", "pi
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ping-pong-visualizer", "ping-pong\ping-pong-visualizer\ping-pong-visualizer.vcxproj", "{75DB5C70-586C-4AF0-AC02-4F08895C3663}"
 EndProject
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "Results", "ping-pong\Results\Results.pyproj", "{14783C53-EF84-4670-A4E3-CE5CAD39F4AC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
 		Debug|x64 = Debug|x64
 		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
 		Release|x64 = Release|x64
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DE9FB339-F300-4A48-B8E1-90C90FE2FF54}.Debug|Any CPU.ActiveCfg = Debug|Win32
 		{DE9FB339-F300-4A48-B8E1-90C90FE2FF54}.Debug|x64.ActiveCfg = Debug|x64
 		{DE9FB339-F300-4A48-B8E1-90C90FE2FF54}.Debug|x64.Build.0 = Debug|x64
 		{DE9FB339-F300-4A48-B8E1-90C90FE2FF54}.Debug|x86.ActiveCfg = Debug|Win32
 		{DE9FB339-F300-4A48-B8E1-90C90FE2FF54}.Debug|x86.Build.0 = Debug|Win32
+		{DE9FB339-F300-4A48-B8E1-90C90FE2FF54}.Release|Any CPU.ActiveCfg = Release|Win32
 		{DE9FB339-F300-4A48-B8E1-90C90FE2FF54}.Release|x64.ActiveCfg = Release|x64
 		{DE9FB339-F300-4A48-B8E1-90C90FE2FF54}.Release|x64.Build.0 = Release|x64
 		{DE9FB339-F300-4A48-B8E1-90C90FE2FF54}.Release|x86.ActiveCfg = Release|Win32
 		{DE9FB339-F300-4A48-B8E1-90C90FE2FF54}.Release|x86.Build.0 = Release|Win32
+		{75DB5C70-586C-4AF0-AC02-4F08895C3663}.Debug|Any CPU.ActiveCfg = Debug|Win32
 		{75DB5C70-586C-4AF0-AC02-4F08895C3663}.Debug|x64.ActiveCfg = Debug|x64
 		{75DB5C70-586C-4AF0-AC02-4F08895C3663}.Debug|x64.Build.0 = Debug|x64
 		{75DB5C70-586C-4AF0-AC02-4F08895C3663}.Debug|x86.ActiveCfg = Debug|Win32
 		{75DB5C70-586C-4AF0-AC02-4F08895C3663}.Debug|x86.Build.0 = Debug|Win32
+		{75DB5C70-586C-4AF0-AC02-4F08895C3663}.Release|Any CPU.ActiveCfg = Release|Win32
 		{75DB5C70-586C-4AF0-AC02-4F08895C3663}.Release|x64.ActiveCfg = Release|x64
 		{75DB5C70-586C-4AF0-AC02-4F08895C3663}.Release|x64.Build.0 = Release|x64
 		{75DB5C70-586C-4AF0-AC02-4F08895C3663}.Release|x86.ActiveCfg = Release|Win32
 		{75DB5C70-586C-4AF0-AC02-4F08895C3663}.Release|x86.Build.0 = Release|Win32
+		{14783C53-EF84-4670-A4E3-CE5CAD39F4AC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{14783C53-EF84-4670-A4E3-CE5CAD39F4AC}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{14783C53-EF84-4670-A4E3-CE5CAD39F4AC}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{14783C53-EF84-4670-A4E3-CE5CAD39F4AC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{14783C53-EF84-4670-A4E3-CE5CAD39F4AC}.Release|x64.ActiveCfg = Release|Any CPU
+		{14783C53-EF84-4670-A4E3-CE5CAD39F4AC}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -40,6 +54,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{DE9FB339-F300-4A48-B8E1-90C90FE2FF54} = {72A50BE0-2104-46C5-BFAD-8A492FB1FB4D}
 		{75DB5C70-586C-4AF0-AC02-4F08895C3663} = {72A50BE0-2104-46C5-BFAD-8A492FB1FB4D}
+		{14783C53-EF84-4670-A4E3-CE5CAD39F4AC} = {72A50BE0-2104-46C5-BFAD-8A492FB1FB4D}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0F88527E-26F8-43E0-A8C6-C3CB689440BD}

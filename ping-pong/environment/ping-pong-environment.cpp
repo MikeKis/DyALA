@@ -43,7 +43,7 @@ const unsigned maxSpotPassageTime_ms = 1000;
 const unsigned nSpatialZones = 30;
 const int nVelocityZones = 9;
 const int nRelPos = 5;
-const unsigned RelPosStep = (unsigned)round(RACKET_SIZE / (3. / nSpatialZones));
+const float rRelPosStep = RACKET_SIZE / 3;   // Racket takes 3 middle positions of the nRelPos x nRelPos grid.
 const unsigned nInputs = 3 * nSpatialZones + 2 * nVelocityZones + nRelPos * nRelPos;
 
 const float rAction = 1.F / nSpatialZones;
@@ -199,9 +199,9 @@ protected:
 		vb_Spikes[nSpatialZones * 2 + indvxBall] = SIGNAL_ON;
 		vb_Spikes[nSpatialZones * 2 + nVelocityZones + indvyBall] = SIGNAL_ON;
 		vb_Spikes[nSpatialZones * 2 + nVelocityZones * 2 + indRacket] = SIGNAL_ON;
-		int indxRel = indxBall / RelPosStep;
+		int indxRel = (int)((vr_PhaseSpacePoint[0] + 0.5) / rRelPosStep);
 		if (indxRel < nRelPos) {
-			int indyRel = (indRacket - indyBall) / RelPosStep;   // Raster goes from top (higher y) to bottom - in opposite 
+			int indyRel = (int)((vr_PhaseSpacePoint[4] - vr_PhaseSpacePoint[1] + rRelPosStep / 2) / rRelPosStep);   // Raster goes from top (higher y) to bottom - in opposite 
 			                                                     // direction to y axis
 			if (abs(indyRel) <= (nRelPos - 1) / 2) {
 				indyRel += (nRelPos - 1) / 2;
@@ -344,7 +344,7 @@ public:
 	}
 };
 
-const float rBasicPoissonFrequency = 0.01F;
+const float rBasicPoissonFrequency = 0.003F;
 const float rMinTargetNetworkActivity = 0.01F;
 
 class DYNAMIC_LIBRARY_EXPORTED_CLASS AdaptivePoisson: public IReceptors
@@ -503,4 +503,8 @@ PING_PONG_ENVIRONMENT_EXPORT void ObtainSpikes(const vector<int> &v_Firing, stri
 	++ntact;
 	if (PostRewardCounter)
 		--PostRewardCounter;
+	if (!(ntact % 200000)) {
+		cout << "NRewards=" << nRewards << " nCorr=" << nCorr << " NRecognitions=" << nRecognitions << endl;
+		nRewards = nCorr = nRecognitions = 0;
+	}
 }
