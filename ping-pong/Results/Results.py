@@ -1,0 +1,390 @@
+import csv
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+from collections import namedtuple
+from matplotlib.widgets import Slider
+import numpy as np
+import statistics
+import bisect
+import math
+
+#zz = np.array([1,2,3])
+#yy = np.array([3,2,1])
+
+#ll = [zz,yy]
+#print(ll)
+
+#xx = np.amax(ll, axis=0)
+#print(xx)
+
+#aa = [zz,np.zeros((2,2))]
+#bb = [yy,np.zeros((2,2))]
+
+#cc = [aa,bb]
+#print(cc)
+
+#dd = [[a[i] for a in cc] for i in range(len(cc[0]))]
+#print(dd)
+
+#print(dd[0])
+#print(np.amax(dd[0], axis=0))
+
+#ww = [np.amax(i, axis=0) for i in dd]
+#print(ww)
+
+file = "monitoring.2.csv"
+ReceptorSectionBoundaries = [133,134,135,335]
+indLrew = [203, 353]
+
+nSpatialZones = 30
+nVelocityZones = 9
+nRelPos = 5
+nPrimaryStateRecognizers = 10
+
+sec = []
+CharTime = []
+ThrDecayT = []
+ThresholdExcessIncrementMultiplier = []
+AbsRefT = []
+WINC = []
+RelWDec = []
+Inh = []
+
+secint = []
+SectionIntensity = namedtuple('SectionIntensity', ['sec', 'tact', 'relfre'])
+lin = []
+Link = namedtuple('Link', 'tact,neu,type,indsyn,minW,maxW,Is_pla,delay,src,effw,basew,W')
+tact = []
+neusec = []
+migrations = []
+neuint = [0 for i in range(indLrew[1] - indLrew[0])]
+
+# It is guaranteed that all records are ordered by tact
+
+with open(file, newline = '') as fil:
+    bHeader = True
+    csr = csv.reader(fil)
+    for row in csr:
+        if bHeader:
+            bHeader = False
+        elif row[0] == "secsta":
+            sec.append(float(row[1]))
+            CharTime.append(float(row[2]))
+            ThrDecayT.append(float(row[3]))
+            ThresholdExcessIncrementMultiplier.append(row[4])
+            AbsRefT.append(float(row[5]))
+            WINC.append(float(row[6]))
+            RelWDec.append(float(row[7]))
+            Inh.append(float(row[8]))
+        elif row[0] == "secint":
+            if float(row[2]) >= 0:
+                secint.append(SectionIntensity(float(row[2]), float(row[1]), float(row[3])))
+        elif row[0] == "lin":
+            lin.append(Link(float(row[1]), int(row[2]), float(row[3]), float(row[4]), float(row[5]), float(row[6]), float(row[7]) != 0, float(row[8]), int(row[9]), float(row[10]), float(row[11]), float(row[12])))
+        elif row[0] == "neu->sec":
+            tac = int(row[1])
+            neu = int(row[2])
+            s = int(row[3])
+
+            # It is assumed that the 1st neu->sec section is ordered ny neu
+
+            if len(tact) == 0 or tac != tact[-1]:
+                tact.append(tac)
+                neusec.append([] if tac == 0 else [-1 for i in range(len(neusec[0]))])
+                migrations.append(0)
+            if tac == 0:
+                neusec[-1].append(s)
+            else:
+                neusec[-1][neu] = s
+        elif row[0] == "neudyn":
+            migrations[-1] += 1
+        elif row[0] == "neu":
+            neu = int(row[2])
+            if indLrew[0] <= neu < indLrew[1]:
+                neuint[neu - indLrew[0]] += int(row[3])
+
+nDopamineLevels = int(math.log2(len(neuint) / nPrimaryStateRecognizers + 1));
+LevelRepresentatives = []
+liml = 0
+limh = nPrimaryStateRecognizers
+for j in range(nDopamineLevels):
+    LevelRepresentatives.append(np.argsort(np.array(neuint[liml:limh]))[-nPrimaryStateRecognizers:] + liml)
+    liml, limh = limh, limh + (limh - liml) * 2
+
+nSectionsperNetwork = len(sec)
+print('total number of sections ', len(sec))
+print('sections per network ', nSectionsperNetwork)
+nSectionsperNetwork = int(nSectionsperNetwork)
+
+SecInt = {}
+fig, axs = plt.subplots(1, 1, figsize = (10, 3))
+i = 0
+for j in range(nSectionsperNetwork):
+    s = sec[i]
+    x = [t.tact for t in secint if t.sec == s]
+    y = [t.relfre for t in secint if t.sec == s]
+    SecInt[s] = statistics.mean(y)
+    axs.plot(x, y, label = "%d" % (j,), linewidth = 1)
+    i += 1
+leg = axs.legend(loc = 'best', ncol = 2, mode = "expand", shadow = True, fancybox = True)
+leg.get_frame().set_alpha(0.5)
+plt.title('Section relative activity')
+plt.show()
+
+print("mean section intensity:")
+print(SecInt)
+
+effw = [t.effw if t.type == 0 else t.W for t in lin]
+
+i = 0
+deffw_sum = {}
+sat_sup_dist = []
+tactNo = -1
+guess_shift = -1
+maxNLinksofThisType = {}
+
+NLinksofThisType = {}
+NSuppressedLinksofThisType = {}
+NSaturatedLinksofThisType = {}
+
+RecField = []
+
+print("Link data processing...")
+cnt = 0
+lastneu = -1
+while i <= len(lin):
+    end = i == len(lin)
+    if i == 0 or end or lin[i].tact != lin[i - 1].tact:
+        guess_shift = cnt
+        cnt = 0
+    if end or lin[i].Is_pla:
+        if end or lin[i].neu != lastneu:
+            for str, l in NLinksofThisType.items():
+                if l > maxNLinksofThisType.setdefault(str, 0):
+                    maxNLinksofThisType[str] = l
+                if l > sat_sup_dist[-1].setdefault(str, [0, [], []])[0]:
+                    sat_sup_dist[-1][str][0] = l
+                sat_sup_dist[-1][str][1].append(NSuppressedLinksofThisType.get(str, 0))
+                sat_sup_dist[-1][str][2].append(NSaturatedLinksofThisType.get(str, 0))
+            if not end:
+                lastneu = lin[i].neu
+                NLinksofThisType.clear();
+                NSuppressedLinksofThisType.clear();
+                NSaturatedLinksofThisType.clear();
+        if not end:
+            if tactNo < 0 or lin[i].tact != tact[tactNo]:
+                sat_sup_dist.append({})
+                RecField.append([[np.zeros(nSpatialZones), np.zeros(nSpatialZones), np.zeros(nVelocityZones), np.zeros(nVelocityZones), np.zeros(nSpatialZones), np.zeros((nRelPos, nRelPos))] for i in range(indLrew[1] - indLrew[0])])
+                tactNo += 1
+                print('Now tact %d is processed' % tact[tactNo])
+            strsecfrom = "R%d" % (bisect.bisect_right(ReceptorSectionBoundaries, lin[i].src),) if lin[i].src >= 0 else "%d" % (neusec[tactNo][-1 - lin[i].src],)
+            secto = neusec[tactNo][lin[i].neu]
+            strLink = strsecfrom + '->' + "%d" % (secto,)
+            if tactNo == 0 and deffw_sum.get(strLink) == None:
+                deffw_sum[strLink] = []
+            if tactNo > 0:
+                if len(deffw_sum[strLink]) < tactNo:
+                    deffw_sum[strLink].append(0)
+                if i - guess_shift < 0:
+                    guess_shift = i
+                if lin[i - guess_shift].neu < lin[i].neu:
+                    while lin[i - guess_shift].neu < lin[i].neu:
+                        guess_shift -= 1
+                elif lin[i - guess_shift].neu > lin[i].neu:
+                    while lin[i - guess_shift].neu > lin[i].neu:
+                        guess_shift += 1
+                if lin[i - guess_shift].src > lin[i].src:
+                    while lin[i - guess_shift].src > lin[i].src and lin[i - guess_shift].neu == lin[i].neu:
+                        guess_shift -= 1
+                elif lin[i - guess_shift].src < lin[i].src:
+                    while lin[i - guess_shift].src < lin[i].src and lin[i - guess_shift].neu == lin[i].neu:
+                        guess_shift += 1
+                if lin[i - guess_shift].src == lin[i].src and lin[i - guess_shift].neu == lin[i].neu:
+                    deffw_sum[strLink][-1] += abs(effw[i] - effw[i - guess_shift])
+                else:
+                    deffw_sum[strLink][-1] += abs(effw[i])
+
+                if indLrew[0] <= lin[i].neu < indLrew[1] and 0 <= lin[i].src < ReceptorSectionBoundaries[0]:
+                    ind = lin[i].src
+                    if ind < nSpatialZones:
+                        RecField[-1][lin[i].neu - indLrew[0]][0][ind] = lin[i].W
+                    ind -= nSpatialZones
+                    if 0 <= ind < nSpatialZones:
+                        RecField[-1][lin[i].neu - indLrew[0]][1][ind] = lin[i].W
+                    ind -= nSpatialZones
+                    if 0 <= ind < nVelocityZones:
+                        RecField[-1][lin[i].neu - indLrew[0]][2][ind] = lin[i].W
+                    ind -= nVelocityZones
+                    if 0 <= ind < nVelocityZones:
+                        RecField[-1][lin[i].neu - indLrew[0]][3][ind] = lin[i].W
+                    ind -= nVelocityZones
+                    if 0 <= ind < nSpatialZones:
+                        RecField[-1][lin[i].neu - indLrew[0]][4][ind] = lin[i].W
+                    ind -= nSpatialZones
+                    if 0 <= ind:
+                        RecField[-1][lin[i].neu - indLrew[0]][5][int(ind / nRelPos)][ind % nRelPos] = lin[i].W
+
+            if strsecfrom[0] != 'R':
+                strsecfrom = "%d" % (neusec[tactNo][-1 - lin[i].src] % nSectionsperNetwork,)
+            secto = secto % nSectionsperNetwork
+            strLink = strsecfrom + '->' + "%d" % (secto,)
+            if lin[i].W < 0:
+                NSuppressedLinksofThisType.setdefault(strLink, 0)
+                NSuppressedLinksofThisType[strLink] += 1
+            elif lin[i].W > 30:
+                NSaturatedLinksofThisType.setdefault(strLink, 0)
+                NSaturatedLinksofThisType[strLink] += 1
+            NLinksofThisType.setdefault(strLink, 0)
+            NLinksofThisType[strLink] += 1
+    cnt += 1
+    i += 1
+
+rfmax = []
+
+for rf in RecField:
+    rfm = []
+    liml = 0
+    limh = nPrimaryStateRecognizers
+    for j in range(nDopamineLevels):
+        z = rf[liml:limh]
+        y = [[a[k] for a in z] for k in range(len(z[0]))]
+        ww = [np.amax(k, axis=0) for k in y]
+        rfm.append(ww)
+        liml, limh = limh, limh + (limh - liml) * 2
+    rfmax.append(rfm)
+
+
+print("Maximum number (in the whole history) of links between sections")
+print(maxNLinksofThisType)
+
+nPostsynapticNeuronsforLinkType = [0 for i in range(len(sat_sup_dist[0]))]
+for dic in sat_sup_dist:
+    i = 0
+    for str, l in dic.items():
+        nPostsynapticNeuronsforLinkType[i] = max(nPostsynapticNeuronsforLinkType[i], len(l[1]))
+        i += 1
+
+print("Maximum number (in the whole history) of postsynaptic neurons for each link type")
+print(nPostsynapticNeuronsforLinkType)
+
+fig, axs = plt.subplots(1, 1, figsize = (10, 3))
+i = 0
+for d in deffw_sum.keys():
+    sectar = int(d.split('>')[1])
+    if i * nSectionsperNetwork <= sectar < (i + 1) * nSectionsperNetwork:
+        if max(deffw_sum[d]) > 0:
+            axs.plot(tact[1:], deffw_sum[d], label = d, linewidth = 1)
+        else:
+            for s in sat_sup_dist:
+                s.pop(d, 0)
+leg = axs.legend(loc = 'best', ncol = 2, mode = "expand", shadow = True, fancybox = True)
+leg.get_frame().set_alpha(0.5)
+i += 1
+plt.title('Weight change dynamics')
+plt.show()
+
+mpl.rc('font', size=10)
+coo = np.arange(0, 30)
+norm = mpl.colors.TwoSlopeNorm(vmin = -30, vcenter = 0, vmax = 100)
+
+def draw_rec_fields(tac, reps):
+    indtact = tact.index(tac)
+    i = 0
+    for j in range(nPrimaryStateRecognizers):
+        for k in range(len(RecField[0][0]) - 1):
+            axes_hist[j][k].clear()
+        axes_hist[j][0].set_ylim(-30, 30)
+        axes_hist[j][0].plot(RecField[indtact][reps[j]][0])
+        if j == 0:
+            axes_hist[j][0].set_title('x')
+        axes_hist[j][1].set_ylim(-30, 30)
+        axes_hist[j][1].plot(coo, RecField[indtact][reps[j]][1], coo, RecField[indtact][reps[j]][4])
+        if j == 0:
+            axes_hist[j][1].set_title('y')
+        axes_hist[j][2].set_ylim(-30, 30)
+        axes_hist[j][2].plot(RecField[indtact][reps[j]][2])
+        if j == 0:
+            axes_hist[j][2].set_title('vx')
+        axes_hist[j][3].set_ylim(-30, 30)
+        axes_hist[j][3].plot(RecField[indtact][reps[j]][3])
+        if j == 0:
+            axes_hist[j][3].set_title('vy')
+        axes_hist[j][4].imshow(RecField[indtact][reps[j]][5], cmap = 'seismic', vmin = -30, vmax = 30, norm = norm)
+
+curdoplev = 0
+
+for reps in LevelRepresentatives:
+
+    fig, ax = plt.subplots()
+    axes_hist = [[] for i in range(nPrimaryStateRecognizers)]
+    i = 1
+    for j in range(nPrimaryStateRecognizers):
+        for k in range(len(RecField[0][0]) - 1):
+            axes_hist[j].append(plt.subplot(nPrimaryStateRecognizers, len(RecField[0][0]) - 1, i))
+            i += 1
+
+    draw_rec_fields(0, reps)
+
+    axsli = plt.axes([0.25, 0.03, 0.65, 0.03])
+    sli = Slider(axsli, 'tact', 0., tact[-1], valinit = 0, valstep = tact[1], valfmt = "%d")
+    axsli.xaxis.set_visible(True)
+    axsli.set_xticks(tact)
+
+    def update_sli(val):
+        tac = sli.val
+        draw_rec_fields(tac, reps)
+
+    sli.on_changed(update_sli)
+
+    plt.get_current_fig_manager().canvas.set_window_title('Lrew receptive fields (dopamine level %d)' % (curdoplev,))
+    plt.show()
+    curdoplev += 1
+
+fig, ax = plt.subplots()
+axes_hist = [[] for i in range(nDopamineLevels)]
+i = 1
+for j in range(nDopamineLevels):
+    for k in range(len(RecField[0][0]) - 1):
+        axes_hist[j].append(plt.subplot(nDopamineLevels, len(RecField[0][0]) - 1, i))
+        i += 1
+plt.title('Lrew receptive fields')
+
+def draw_rec_fields(tac):
+    indtact = tact.index(tac)
+    i = 0
+    for j in range(nDopamineLevels):
+        for k in range(len(RecField[0][0]) - 1):
+            axes_hist[j][k].clear()
+        axes_hist[j][0].set_ylim(-30, 30)
+        axes_hist[j][0].plot(rfmax[indtact][j][0])
+        if j == 0:
+            axes_hist[j][0].set_title('x')
+        axes_hist[j][1].set_ylim(-30, 30)
+        axes_hist[j][1].plot(coo, rfmax[indtact][j][1], coo, rfmax[indtact][j][4])
+        if j == 0:
+            axes_hist[j][1].set_title('y')
+        axes_hist[j][2].set_ylim(-30, 30)
+        axes_hist[j][2].plot(rfmax[indtact][j][2])
+        if j == 0:
+            axes_hist[j][2].set_title('vx')
+        axes_hist[j][3].set_ylim(-30, 30)
+        axes_hist[j][3].plot(rfmax[indtact][j][3])
+        if j == 0:
+            axes_hist[j][3].set_title('vy')
+        axes_hist[j][4].imshow(rfmax[indtact][j][5], cmap = 'seismic', vmin = -30, vmax = 30, norm = norm)
+
+draw_rec_fields(0)
+
+axsli = plt.axes([0.25, 0.03, 0.65, 0.03])
+sli = Slider(axsli, 'tact', 0., tact[-1], valinit = 0, valstep = tact[1], valfmt = "%d")
+axsli.xaxis.set_visible(True)
+axsli.set_xticks(tact)
+
+def update_sli(val):
+    tac = sli.val
+    draw_rec_fields(tac)
+
+sli.on_changed(update_sli)
+
+plt.get_current_fig_manager().canvas.set_window_title('Lrew - max weights for dopamine levels')
+plt.show()
