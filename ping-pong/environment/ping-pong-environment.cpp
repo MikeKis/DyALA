@@ -46,7 +46,7 @@ const int nRelPos = 5;
 const float rRelPosStep = RACKET_SIZE / 3;   // Racket takes 3 middle positions of the nRelPos x nRelPos grid.
 const unsigned nInputs = 3 * nSpatialZones + 2 * nVelocityZones + nRelPos * nRelPos;
 
-const float rAction = 1.F / nSpatialZones;
+const float rAction = 3.F / nSpatialZones;
 
 const float rStateFiringFrequency = 0.3F;
 
@@ -344,7 +344,7 @@ public:
 	}
 };
 
-const float rBasicPoissonFrequency = 0.003F;
+const float rBasicPoissonFrequency = 0.0001F;   // Надо, чтобы за период допаминовой пластичности было примерно 1-2 случайных действия - не больше.
 const float rMinTargetNetworkActivity = 0.01F;
 
 class DYNAMIC_LIBRARY_EXPORTED_CLASS AdaptivePoisson: public IReceptors
