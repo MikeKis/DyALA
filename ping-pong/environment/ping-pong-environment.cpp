@@ -16,6 +16,7 @@ Emulates signal from videocamera looking at a moving light spot.
 #include <vector>
 #include <iostream>
 #include <memory>
+#include <deque>
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 
@@ -168,6 +169,15 @@ void UpdateWorld(vector<float> &vr_PhaseSpacePoint)
 	}
 }
 
+int ntact = 0;
+
+const int nGoalLevels = 4;
+const int LevelDuration = 100;
+deque<pair<size_t, vector<int> > > qptactvind_;
+int CurrentLevel = nGoalLevels;
+map<vector<int>, vector<int> > mvindvn_;
+const int minCoincedence = 4;
+
 class DYNAMIC_LIBRARY_EXPORTED_CLASS rec_ping_pong: public IReceptors
 {
 	vector<float> vr_VelocityZoneBoundary;
@@ -176,21 +186,30 @@ protected:
 	{
 		static ofstream ofsState("ping_pong_state.csv");
 		vector<float> vr_PhaseSpacePoint(5);
+
+		vector<int> vind_(6);
+#define indxBall vind_[0]
+#define indyBall vind_[1]
+#define indvxBall vind_[2]
+#define indvyBall vind_[3]
+#define indRacket vind_[4]
+#define indRaster vind_[5]
+
 		UpdateWorld(vr_PhaseSpacePoint);
 		for (auto z: vr_PhaseSpacePoint)
 			ofsState << z << ',';
 		ofsState << endl;
-		int indxBall = (int)((vr_PhaseSpacePoint[0] + 0.5) / (1. / nSpatialZones));
+		indxBall = (int)((vr_PhaseSpacePoint[0] + 0.5) / (1. / nSpatialZones));
 		if (indxBall == nSpatialZones)
 			indxBall = nSpatialZones - 1;
-		int indyBall = (int)((vr_PhaseSpacePoint[1] + 0.5) / (1. / nSpatialZones));
+		indyBall = (int)((vr_PhaseSpacePoint[1] + 0.5) / (1. / nSpatialZones));
 		if (indyBall == nSpatialZones)
 			indyBall = nSpatialZones - 1;
-		int indvxBall = (int)(lower_bound(vr_VelocityZoneBoundary.begin(), vr_VelocityZoneBoundary.end(), abs(vr_PhaseSpacePoint[2])) - vr_VelocityZoneBoundary.begin());
+		indvxBall = (int)(lower_bound(vr_VelocityZoneBoundary.begin(), vr_VelocityZoneBoundary.end(), abs(vr_PhaseSpacePoint[2])) - vr_VelocityZoneBoundary.begin());
 		indvxBall = vr_PhaseSpacePoint[2] < 0 ? nVelocityZones / 2 - indvxBall : nVelocityZones / 2 + indvxBall;
-		int indvyBall = (int)(lower_bound(vr_VelocityZoneBoundary.begin(), vr_VelocityZoneBoundary.end(), abs(vr_PhaseSpacePoint[3])) - vr_VelocityZoneBoundary.begin());
+		indvyBall = (int)(lower_bound(vr_VelocityZoneBoundary.begin(), vr_VelocityZoneBoundary.end(), abs(vr_PhaseSpacePoint[3])) - vr_VelocityZoneBoundary.begin());
 		indvyBall = vr_PhaseSpacePoint[3] < 0 ? nVelocityZones / 2 - indvyBall : nVelocityZones / 2 + indvyBall;
-		int indRacket = (int)((vr_PhaseSpacePoint[4] + 0.5) / (1. / nSpatialZones));
+		indRacket = (int)((vr_PhaseSpacePoint[4] + 0.5) / (1. / nSpatialZones));
 		if (indRacket == nSpatialZones)
 			indRacket = nSpatialZones - 1;
 		vector<char> vb_Spikes(nInputs, 0);
@@ -205,7 +224,7 @@ protected:
 			                                                     // direction to y axis
 			if (abs(indyRel) <= (nRelPos - 1) / 2) {
 				indyRel += (nRelPos - 1) / 2;
-				int indRaster = indyRel * nRelPos + indxRel;
+				indRaster = indyRel * nRelPos + indxRel;
 				vb_Spikes[nSpatialZones * 3 + nVelocityZones * 2 + indRaster] = SIGNAL_ON;
 			}
 		}
@@ -213,6 +232,45 @@ protected:
 			*prec = i;
 			prec += neuronstrsize;
 		}
+
+		if (!ntact || vind_ != qptactvind_.back().second) {
+			qptactvind_.push_back(make_pair(ntact, vind_));
+			auto z = mvindvn_.find(vind_);
+			if (z == mvindvn_.end()) {
+				map<vector<int>, vector<int> >::const_iterator y;
+				int maxdif = 6 - (minCoincedence - 1);
+				vector<map<vector<int>, vector<int> >::const_iterator> w;
+				int difstop = maxdif;
+				FOR_ALL(y, mvindvn_) {
+					int ndif = 0;
+					int v;
+					for (v = 0; v < 6 && ndif < difstop; ++v)
+						if (y->first[v] != vind_[v])
+							++ndif;
+					if (v == 6) {
+						if (ndif < maxdif) {
+							w.resize(1);
+							w.front() = y;
+							maxdif = ndif;
+							difstop = maxdif + 1;
+						} else w.push_back(y);
+					}
+				}
+				if (w.empty())
+					CurrentLevel = nGoalLevels;
+				else {
+					vector<int> vn_(nGoalLevels, 0);
+					for (auto u: w)
+						FORI(nGoalLevels)
+						vn_[_i] += u->second[_i];
+					CurrentLevel = max_element(vn_.begin(), vn_.end()) - vn_.begin();
+				}
+			} else CurrentLevel = max_element(z->second.begin(), z->second.end()) - z->second.begin();
+		}
+		if (qptactvind_.size() > 1)
+			while (qptactvind_[1].first < ntact - nGoalLevels * LevelDuration) 
+				qptactvind_.pop_front();
+
 		return true;
 	}
 	virtual void GetMeanings(VECTOR<STRING> &vstr_Meanings) const 
@@ -297,30 +355,58 @@ bool b_forVerifier_Reward = false;
 
 class DYNAMIC_LIBRARY_EXPORTED_CLASS Evaluator: public IReceptors
 {
-	bool bReward;
-	int  TrainCounter;
-	int  PeriodCounter;
+public:
+	enum type
+	{
+		reward,
+		punishment,
+		_debug_rewnorm
+	};
+private:
+	enum Evaluator::type typ;
+	int                  TrainCounter;
+	int                  PeriodCounter;
+
+	int                  curlev = nGoalLevels;
+
 protected:
 	virtual void GetMeanings(VECTOR<STRING> &vstr_Meanings) const
 	{
 		vstr_Meanings.resize(1);
-		vstr_Meanings.front() = bReward ? "REW" : "PUN";
+		vstr_Meanings.front() = typ == reward ? "REW" : typ == punishment ? "PUN" : "$$$rewnorm";
 	}
 public:
-	Evaluator(bool bRew) : IReceptors(1), bReward(bRew) {}
+	Evaluator(enum Evaluator::type t) : IReceptors(1), typ(t) {}
 	virtual bool bGenerateReceptorSignals(char *prec, size_t neuronstrsize) override
 	{
-		if (!bReward) {
-			if (es.pprr_Ball->first < -0.5F) {
-				TrainCounter = RewardTrainLength;
-				PeriodCounter = 1;
-				--RewardPunishmentBalance;
-			}
-		} else if (es.pprr_Ball->first == -0.5F) {
-			TrainCounter = RewardTrainLength;
-			PeriodCounter = 1;
-			++RewardPunishmentBalance;
-			b_forVerifier_Reward = true;
+		switch (typ) {
+			case punishment: if (es.pprr_Ball->first < -0.5F) {
+								TrainCounter = RewardTrainLength;
+								PeriodCounter = 1;
+								--RewardPunishmentBalance;
+							 }
+							 break;
+			case reward:     if (es.pprr_Ball->first == -0.5F) {
+								TrainCounter = RewardTrainLength;
+								PeriodCounter = 1;
+								++RewardPunishmentBalance;
+								b_forVerifier_Reward = true;
+
+								auto z = qptactvind_.begin();
+								FORI(nGoalLevels) {
+									while (z->first < ntact - _i * LevelDuration) {
+										auto p_ = mvindvn_.insert(make_pair(z->second, vector<int>(nGoalLevels, 0)));
+										++p_.first->second[_i];
+										++z;
+									}
+									auto p_ = mvindvn_.insert(make_pair(z->second, vector<int>(nGoalLevels, 0)));
+									++p_.first->second[_i];
+								}
+							 }
+							 break;
+			default:         *prec = CurrentLevel < curlev ? 1 : 0;
+						     curlev = CurrentLevel;
+				             return true;
 		}
 		*prec = 0;
 		if (TrainCounter && !--PeriodCounter) {
@@ -334,13 +420,13 @@ public:
 	virtual void SaveStatus(Serializer &ser) const override
 	{
 		IReceptors::SaveStatus(ser);
-		ser << bReward;
+		ser << typ;
 	}
 	virtual ~Evaluator() = default;
 	void LoadStatus(Serializer &ser)
 	{
 		IReceptors::LoadStatus(ser);
-		ser >> bReward;
+		ser >> typ;
 	}
 };
 
@@ -402,10 +488,14 @@ PING_PONG_ENVIRONMENT_EXPORT IReceptors *SetParametersIn(int &nReceptors, const 
 		case 0: nReceptors = nInputs;
 				return new rec_ping_pong;
 		case 1: nReceptors = 1;
-			    return new Evaluator(false);
+			    return new Evaluator(Evaluator::punishment);
 		case 2: nReceptors = 1;
-			    return new Evaluator(true);
+			    return new Evaluator(Evaluator::reward);
 		case 3: return papG = new AdaptivePoisson(nReceptors);
+
+		case 4: nReceptors = 1;
+				return new Evaluator(Evaluator::_debug_rewnorm);
+
 		default: cout << "Too many calls of SetParametersIn\n";
 				exit(-1);
 	}
@@ -420,10 +510,10 @@ PING_PONG_ENVIRONMENT_EXPORT IReceptors *LoadStatus(Serializer &ser)
 		case 0: prpp = new rec_ping_pong;
 				prpp->LoadStatus(ser);
 				return prpp;
-		case 1: peva = new Evaluator(false);
+		case 1: peva = new Evaluator(Evaluator::punishment);
 				peva->LoadStatus(ser);
 				return peva;
-		case 2: peva = new Evaluator(true);
+		case 2: peva = new Evaluator(Evaluator::reward);
 				peva->LoadStatus(ser);
 				return peva;
 		case 3: papG = new AdaptivePoisson(true);
@@ -453,7 +543,6 @@ PING_PONG_ENVIRONMENT_EXPORT bool ObtainOutputSpikes(const vector<int> &v_Firing
 	return true;
 }
 
-int ntact = 0;
 int LastRegistration = -1000000;
 int PostRewardCounter = 0;
 int nRecognitions = 0;
