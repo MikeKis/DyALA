@@ -347,6 +347,8 @@ public:
 const float rBasicPoissonFrequency = 0.0001F;   // Надо, чтобы за период допаминовой пластичности было примерно 1-2 случайных действия - не больше.
 const float rMinTargetNetworkActivity = 0.01F;
 
+int ntact = 0;
+
 class DYNAMIC_LIBRARY_EXPORTED_CLASS AdaptivePoisson: public IReceptors
 {
 	bool bActionWasForcedbyNoise;
@@ -358,6 +360,16 @@ public:
 
 	virtual bool bGenerateReceptorSignals(char *prec, size_t neuronstrsize) override
 	{
+
+		if (ntact > 300000) {
+			FORI(nReceptors) {
+				*prec = 0;
+				prec += neuronstrsize;
+			}
+			return true;
+		}
+
+
 		rCurrentFrequency += rBasicPoissonFrequency * rMinTargetNetworkActivity;
 		if (rCurrentFrequency > rBasicPoissonFrequency)
 			rCurrentFrequency = rBasicPoissonFrequency;
@@ -453,7 +465,6 @@ PING_PONG_ENVIRONMENT_EXPORT bool ObtainOutputSpikes(const vector<int> &v_Firing
 	return true;
 }
 
-int ntact = 0;
 int LastRegistration = -1000000;
 int PostRewardCounter = 0;
 int nRecognitions = 0;
