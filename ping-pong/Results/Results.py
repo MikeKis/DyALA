@@ -8,31 +8,7 @@ import statistics
 import bisect
 import math
 
-#zz = np.array([1,2,3])
-#yy = np.array([3,2,1])
-
-#ll = [zz,yy]
-#print(ll)
-
-#xx = np.amax(ll, axis=0)
-#print(xx)
-
-#aa = [zz,np.zeros((2,2))]
-#bb = [yy,np.zeros((2,2))]
-
-#cc = [aa,bb]
-#print(cc)
-
-#dd = [[a[i] for a in cc] for i in range(len(cc[0]))]
-#print(dd)
-
-#print(dd[0])
-#print(np.amax(dd[0], axis=0))
-
-#ww = [np.amax(i, axis=0) for i in dd]
-#print(ww)
-
-file = "monitoring.2.csv"
+file = "monitoring.3.csv"
 ReceptorSectionBoundaries = [133,134,135,335]
 indLA = [0, 200]
 indLrew = [203, 273]
@@ -507,4 +483,67 @@ def update_sli_all_actions(val):
 sli.on_changed(update_sli_all_actions)
 
 plt.get_current_fig_manager().canvas.set_window_title('L - max weights for actions')
+plt.show()
+
+RecField = []
+maxs = np.zeros(5)
+with open('ping-pong-environment.log', newline = '') as fil:
+    csr = csv.reader(fil)
+    for row in csr:
+        RecField.append([np.zeros(nSpatialZones), np.zeros(nSpatialZones), np.zeros(nVelocityZones), np.zeros(nVelocityZones), np.zeros(nSpatialZones), np.zeros((nRelPos, nRelPos))])
+        i = 0
+        for v in row:
+            ind = i
+            if ind < nSpatialZones:
+                RecField[-1][0][ind] = int(v)
+                maxs[0] = max(maxs[0], int(v))
+            ind -= nSpatialZones
+            if 0 <= ind < nSpatialZones:
+                RecField[-1][1][ind] = int(v)
+                maxs[1] = max(maxs[1], int(v))
+            ind -= nSpatialZones
+            if 0 <= ind < nVelocityZones:
+                RecField[-1][2][ind] = int(v)
+                maxs[2] = max(maxs[2], int(v))
+            ind -= nVelocityZones
+            if 0 <= ind < nVelocityZones:
+                RecField[-1][3][ind] = int(v)
+                maxs[3] = max(maxs[3], int(v))
+            ind -= nVelocityZones
+            if 0 <= ind < nSpatialZones:
+                RecField[-1][4][ind] = int(v)
+                maxs[1] = max(maxs[1], int(v))
+            ind -= nSpatialZones
+            if 0 <= ind:
+                RecField[-1][5][int(ind / nRelPos)][ind % nRelPos] = int(v)
+                maxs[4] = max(maxs[4], int(v))
+            i += 1
+
+fig, ax = plt.subplots()
+axes_hist = [[] for i in range(len(RecField))]
+i = 1
+for j in range(len(RecField)):
+    for k in range(len(RecField[0]) - 1):
+        axes_hist[j].append(plt.subplot(len(RecField), len(RecField[0]) - 1, i))
+        i += 1
+i = 0
+for j in range(len(RecField)):
+    axes_hist[j][0].set_ylim(0, maxs[0])
+    axes_hist[j][0].plot(RecField[j][0])
+    if j == 0:
+        axes_hist[j][0].set_title('x')
+    axes_hist[j][1].set_ylim(0, maxs[1])
+    axes_hist[j][1].plot(coo, RecField[j][1], coo, RecField[j][4])
+    if j == 0:
+        axes_hist[j][1].set_title('y')
+    axes_hist[j][2].set_ylim(0, maxs[2])
+    axes_hist[j][2].plot(RecField[j][2])
+    if j == 0:
+        axes_hist[j][2].set_title('vx')
+    axes_hist[j][3].set_ylim(0, maxs[3])
+    axes_hist[j][3].plot(RecField[j][3])
+    if j == 0:
+        axes_hist[j][3].set_title('vy')
+    axes_hist[j][4].imshow(RecField[j][5], cmap = 'viridis', vmin = 0, vmax = maxs[4])
+plt.get_current_fig_manager().canvas.set_window_title('Bayes model')
 plt.show()

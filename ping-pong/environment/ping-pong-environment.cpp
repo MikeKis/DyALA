@@ -51,7 +51,7 @@ const float rAction = 3.F / nSpatialZones;
 
 const float rStateFiringFrequency = 0.3F;
 
-#define SIGNAL_ON (rng() < rStateFiringFrequency ? 1 : 0)
+#define SIGNAL_ON rng() < rStateFiringFrequency
 
 class RandomNumberGenerator
 {
@@ -173,10 +173,17 @@ int ntact = 0;
 
 const int nGoalLevels = 4;
 const int LevelDuration = 100;
-deque<pair<size_t, vector<int> > > qptactvind_;
+deque<vector<bool> > qvb_Neuron, qvb_;
+const int NeuronDepth = 30;
+vector<int> vn_Neuron(nInputs, 0);
+vector<bool> vb_Neuron(nInputs, false);
 int CurrentLevel = nGoalLevels;
+const int prerewardperiod = LevelDuration * nGoalLevels;
 map<vector<int>, vector<int> > mvindvn_;
-const int minCoincedence = 4;
+int BayesModel[nGoalLevels + 1][nInputs];
+int nRewardedTacts = 0;
+ofstream ofsrews("rews.csv");
+ofstream ofsBayes("Bayes.csv");
 
 class DYNAMIC_LIBRARY_EXPORTED_CLASS rec_ping_pong: public IReceptors
 {
@@ -212,7 +219,7 @@ protected:
 		indRacket = (int)((vr_PhaseSpacePoint[4] + 0.5) / (1. / nSpatialZones));
 		if (indRacket == nSpatialZones)
 			indRacket = nSpatialZones - 1;
-		vector<char> vb_Spikes(nInputs, 0);
+		vector<bool> vb_Spikes(nInputs, false);
 		vb_Spikes[indxBall] = SIGNAL_ON;
 		vb_Spikes[nSpatialZones + indyBall] = SIGNAL_ON;
 		vb_Spikes[nSpatialZones * 2 + indvxBall] = SIGNAL_ON;
@@ -221,7 +228,7 @@ protected:
 		int indxRel = (int)((vr_PhaseSpacePoint[0] + 0.5) / rRelPosStep);
 		if (indxRel < nRelPos) {
 			int indyRel = (int)((vr_PhaseSpacePoint[4] - vr_PhaseSpacePoint[1] + rRelPosStep / 2) / rRelPosStep);   // Raster goes from top (higher y) to bottom - in opposite 
-			                                                     // direction to y axis
+																 // direction to y axis
 			if (abs(indyRel) <= (nRelPos - 1) / 2) {
 				indyRel += (nRelPos - 1) / 2;
 				indRaster = indyRel * nRelPos + indxRel;
@@ -233,43 +240,52 @@ protected:
 			prec += neuronstrsize;
 		}
 
-		if (!ntact || vind_ != qptactvind_.back().second) {
-			qptactvind_.push_back(make_pair(ntact, vind_));
-			auto z = mvindvn_.find(vind_);
-			if (z == mvindvn_.end()) {
-				map<vector<int>, vector<int> >::const_iterator y;
-				int maxdif = 6 - (minCoincedence - 1);
-				vector<map<vector<int>, vector<int> >::const_iterator> w;
-				int difstop = maxdif;
-				FOR_ALL(y, mvindvn_) {
-					int ndif = 0;
-					int v;
-					for (v = 0; v < 6 && ndif < difstop; ++v)
-						if (y->first[v] != vind_[v])
-							++ndif;
-					if (v == 6) {
-						if (ndif < maxdif) {
-							w.resize(1);
-							w.front() = y;
-							maxdif = ndif;
-							difstop = maxdif + 1;
-						} else w.push_back(y);
+		qvb_Neuron.push_back(vb_Spikes);
+		bool bNeuronChanged = false;
+		FORI(nInputs)
+			if (vb_Spikes[_i] && ++vn_Neuron[_i] == 1) {
+				vb_Neuron[_i] = true;
+				bNeuronChanged = true;
+			}
+		if (qvb_Neuron.size() > NeuronDepth) {
+			FORI(nInputs)
+				if (qvb_Neuron.front()[_i] && !--vn_Neuron[_i]) {
+					vb_Neuron[_i] = false;
+					bNeuronChanged = true;
+				}
+			qvb_Neuron.pop_front();
+		}
+		qvb_.push_front(vb_Neuron);
+		if (qvb_.size() > prerewardperiod) {
+			qvb_.pop_back();
+			FORI(nInputs)
+				if (vb_Neuron[_i])
+					++BayesModel[nGoalLevels][_i];
+			if (bNeuronChanged && nRewardedTacts) {
+				double dmaxVote = 0;
+				double d =  (double)nGoalLevels / nRewardedTacts;
+				for (int z = 0; z < nGoalLevels; ++z) {
+					double dVote = 1;
+					for (unsigned y = 0; y < nInputs && dVote; ++y)
+						if (vb_Neuron[y])
+							dVote *= BayesModel[z][y];
+					if (dVote >= dmaxVote) {
+						dmaxVote = dVote;
+						CurrentLevel = z;
 					}
 				}
-				if (w.empty())
+				dmaxVote /= d * ntact;   // level prior
+				double dVote = 1;
+				for (unsigned y = 0; y < nInputs && dVote; ++y)
+					if (vb_Neuron[y]) {
+						dVote *= (double)BayesModel[nGoalLevels][y] / (ntact - nRewardedTacts);
+						dmaxVote *= d;   // to obtain conditional probabilities instead of counts
+					}
+				dVote *= (ntact - nRewardedTacts) / (double)ntact;   // no reward prior
+				if (dVote >= dmaxVote) 
 					CurrentLevel = nGoalLevels;
-				else {
-					vector<int> vn_(nGoalLevels, 0);
-					for (auto u: w)
-						FORI(nGoalLevels)
-						vn_[_i] += u->second[_i];
-					CurrentLevel = max_element(vn_.begin(), vn_.end()) - vn_.begin();
-				}
-			} else CurrentLevel = max_element(z->second.begin(), z->second.end()) - z->second.begin();
+			}
 		}
-		if (qptactvind_.size() > 1)
-			while (qptactvind_[1].first < ntact - nGoalLevels * LevelDuration) 
-				qptactvind_.pop_front();
 
 		return true;
 	}
@@ -322,6 +338,9 @@ public:
 		sort(vr_samples.begin(), vr_samples.end());
 		FORI((nVelocityZones - 1) / 2)
 			vr_VelocityZoneBoundary[_i] = vr_samples[vr_samples.size() / 9 + _i * 2 * vr_samples.size() / 9];
+
+		memset(BayesModel, 0, sizeof(BayesModel));
+
 	}
 	virtual void Randomize(void) override {rng.Randomize();}
 	virtual void SaveStatus(Serializer &ser) const override
@@ -347,6 +366,8 @@ public:
 };
 
 int RewardPunishmentBalance = 0;
+int nRewards = 0;
+int nPunishments = 0;
 
 const int RewardTrainLength = 10;
 const int RewardTrainPeriod = 2;
@@ -384,28 +405,32 @@ public:
 								TrainCounter = RewardTrainLength;
 								PeriodCounter = 1;
 								--RewardPunishmentBalance;
+								++nPunishments;
 							 }
 							 break;
 			case reward:     if (es.pprr_Ball->first == -0.5F) {
 								TrainCounter = RewardTrainLength;
 								PeriodCounter = 1;
 								++RewardPunishmentBalance;
+								++nRewards;
 								b_forVerifier_Reward = true;
 
-								auto z = qptactvind_.begin();
-								FORI(nGoalLevels) {
-									while (z->first < ntact - _i * LevelDuration) {
-										auto p_ = mvindvn_.insert(make_pair(z->second, vector<int>(nGoalLevels, 0)));
-										++p_.first->second[_i];
-										++z;
-									}
-									auto p_ = mvindvn_.insert(make_pair(z->second, vector<int>(nGoalLevels, 0)));
-									++p_.first->second[_i];
-								}
+								auto y = qvb_.begin();
+								for (int z = 0; z < nGoalLevels; ++z) 
+									for (int x = 0; x < LevelDuration; ++x, ++y)
+										FORI(nInputs)
+											if ((*y)[_i]) {
+												++BayesModel[z][_i];
+												--BayesModel[nGoalLevels][_i];
+											}
+								nRewardedTacts += prerewardperiod;
+
 							 }
 							 break;
 			default:         *prec = CurrentLevel < curlev ? 1 : 0;
 						     curlev = CurrentLevel;
+							 if (*prec)
+								 ofsrews << ntact << ',' << CurrentLevel << endl;
 				             return true;
 		}
 		*prec = 0;
@@ -540,6 +565,16 @@ PING_PONG_ENVIRONMENT_EXPORT bool ObtainOutputSpikes(const vector<int> &v_Firing
 		}
 		papG->RegisterAction();
 	}
+
+	if (ntact && !(ntact % 200000)) {
+		for (int z = 0; z <= nGoalLevels; ++z)
+			FORI(nInputs)
+				ofsBayes << BayesModel[z][_i] << (_i < nInputs - 1 ? ',' : '\n');
+		ofsBayes << endl;
+		cout << "rew " << nRewards << " pun " << nPunishments << endl;
+		nRewards = nPunishments = 0;
+	}
+
 	return true;
 }
 
@@ -547,11 +582,15 @@ int LastRegistration = -1000000;
 int PostRewardCounter = 0;
 int nRecognitions = 0;
 int nCorr = 0;
-int nRewards = 0;
 
 PING_PONG_ENVIRONMENT_EXPORT int Finalize(int OriginalTerminationCode) 
 {
-	cout << "NRewards=" << nRewards << " nCorr=" << nCorr << " NRecognitions=" << nRecognitions << endl;
+
+	for (int z = 0; z <= nGoalLevels; ++z)
+		FORI(nInputs)
+			ofsBayes << BayesModel[z][_i] << (_i < nInputs - 1 ? ',' : '\n');
+
+	cout << "rew " << nRewards << " pun " << nPunishments << endl;
 	return 5000 + RewardPunishmentBalance;
 }
 
@@ -583,7 +622,6 @@ PING_PONG_ENVIRONMENT_EXPORT void ObtainSpikes(const vector<int> &v_Firing, stri
 	if (!PostRewardCounter && any_of(v_Firing.begin(), v_Firing.end(), [=](int indneu) {return p_LREWRange.first <= indneu && indneu < p_LREWRange.second; }))
 		LastRegistration = ntact;
 	if (b_forVerifier_Reward) {
-		++nRewards;
 		if (ntact - LastRegistration < 100)
 			++nCorr;
 		PostRewardCounter = RewardTrainLength * RewardTrainPeriod;
@@ -592,8 +630,4 @@ PING_PONG_ENVIRONMENT_EXPORT void ObtainSpikes(const vector<int> &v_Firing, stri
 	++ntact;
 	if (PostRewardCounter)
 		--PostRewardCounter;
-	if (!(ntact % 200000)) {
-		cout << "NRewards=" << nRewards << " nCorr=" << nCorr << " NRecognitions=" << nRecognitions << endl;
-		nRewards = nCorr = nRecognitions = 0;
-	}
 }
