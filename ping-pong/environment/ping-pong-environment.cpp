@@ -171,7 +171,9 @@ void UpdateWorld(vector<float> &vr_PhaseSpacePoint)
 
 int ntact = 0;
 
-const int nGoalLevels = 4;
+// const double adLevelBoundaries[] = {0.27915265777848186 * 0.27915265777848186, 0.2997424323017368 * 0.2997424323017368, 0.3435725359161685 * 0.3435725359161685, 0.4109012910954389 * 0.4109012910954389};
+const double adLevelBoundaries[] = {0.04, 0.16, 0.36, 0.64};
+const int nGoalLevels = sizeof(adLevelBoundaries) / sizeof(adLevelBoundaries[0]);
 const int LevelDuration = 100;
 deque<vector<bool> > qvb_Neuron, qvb_;
 const int NeuronDepth = 30;
@@ -184,6 +186,7 @@ int BayesModel[nGoalLevels + 1][nInputs];
 int nRewardedTacts = 0;
 ofstream ofsrews("rews.csv");
 ofstream ofsBayes("Bayes.csv");
+double d2cur = 0.;
 
 class DYNAMIC_LIBRARY_EXPORTED_CLASS rec_ping_pong: public IReceptors
 {
@@ -240,52 +243,8 @@ protected:
 			prec += neuronstrsize;
 		}
 
-		qvb_Neuron.push_back(vb_Spikes);
-		bool bNeuronChanged = false;
-		FORI(nInputs)
-			if (vb_Spikes[_i] && ++vn_Neuron[_i] == 1) {
-				vb_Neuron[_i] = true;
-				bNeuronChanged = true;
-			}
-		if (qvb_Neuron.size() > NeuronDepth) {
-			FORI(nInputs)
-				if (qvb_Neuron.front()[_i] && !--vn_Neuron[_i]) {
-					vb_Neuron[_i] = false;
-					bNeuronChanged = true;
-				}
-			qvb_Neuron.pop_front();
-		}
-		qvb_.push_front(vb_Neuron);
-		if (qvb_.size() > prerewardperiod) {
-			qvb_.pop_back();
-			FORI(nInputs)
-				if (vb_Neuron[_i])
-					++BayesModel[nGoalLevels][_i];
-			if (bNeuronChanged && nRewardedTacts) {
-				double dmaxVote = 0;
-				double d =  (double)nGoalLevels / nRewardedTacts;
-				for (int z = 0; z < nGoalLevels; ++z) {
-					double dVote = 1;
-					for (unsigned y = 0; y < nInputs && dVote; ++y)
-						if (vb_Neuron[y])
-							dVote *= BayesModel[z][y];
-					if (dVote >= dmaxVote) {
-						dmaxVote = dVote;
-						CurrentLevel = z;
-					}
-				}
-				dmaxVote /= d * ntact;   // level prior
-				double dVote = 1;
-				for (unsigned y = 0; y < nInputs && dVote; ++y)
-					if (vb_Neuron[y]) {
-						dVote *= (double)BayesModel[nGoalLevels][y] / (ntact - nRewardedTacts);
-						dmaxVote *= d;   // to obtain conditional probabilities instead of counts
-					}
-				dVote *= (ntact - nRewardedTacts) / (double)ntact;   // no reward prior
-				if (dVote >= dmaxVote) 
-					CurrentLevel = nGoalLevels;
-			}
-		}
+		double d2 = (-0.5 - vr_PhaseSpacePoint[0]) * (-0.5 - vr_PhaseSpacePoint[0]) + (vr_PhaseSpacePoint[1] - vr_PhaseSpacePoint[4]) * (vr_PhaseSpacePoint[1] - vr_PhaseSpacePoint[4]);
+		CurrentLevel = lower_bound(adLevelBoundaries, adLevelBoundaries + nGoalLevels, d2) - adLevelBoundaries;
 
 		return true;
 	}
@@ -414,17 +373,6 @@ public:
 								++RewardPunishmentBalance;
 								++nRewards;
 								b_forVerifier_Reward = true;
-
-								auto y = qvb_.begin();
-								for (int z = 0; z < nGoalLevels; ++z) 
-									for (int x = 0; x < LevelDuration; ++x, ++y)
-										FORI(nInputs)
-											if ((*y)[_i]) {
-												++BayesModel[z][_i];
-												--BayesModel[nGoalLevels][_i];
-											}
-								nRewardedTacts += prerewardperiod;
-
 							 }
 							 break;
 			default:         *prec = CurrentLevel < curlev ? 1 : 0;
@@ -457,6 +405,7 @@ public:
 
 const float rBasicPoissonFrequency = 0.0001F;   // Надо, чтобы за период допаминовой пластичности было примерно 1-2 случайных действия - не больше.
 const float rMinTargetNetworkActivity = 0.01F;
+const int NoisePeriod = 300000;
 
 class DYNAMIC_LIBRARY_EXPORTED_CLASS AdaptivePoisson: public IReceptors
 {
@@ -473,7 +422,7 @@ public:
 		if (rCurrentFrequency > rBasicPoissonFrequency)
 			rCurrentFrequency = rBasicPoissonFrequency;
 		FORI(nReceptors) {
-			if (rng() < rCurrentFrequency) {
+			if (ntact < NoisePeriod && rng() < rCurrentFrequency) {
 				*prec = 1;
 				bActionWasForcedbyNoise = true;
 			} else *prec = 0;

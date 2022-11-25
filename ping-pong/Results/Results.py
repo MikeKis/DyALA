@@ -39,6 +39,8 @@ migrations = []
 neuint = [0 for i in range(indLrew[1] - indLrew[0])]
 neuintA = [0 for i in range(indLA[1] - indLA[0])]
 
+maxtact = 1000000
+
 # It is guaranteed that all records are ordered by tact
 
 with open(file, newline = '') as fil:
@@ -63,6 +65,8 @@ with open(file, newline = '') as fil:
             lin.append(Link(float(row[1]), int(row[2]), float(row[3]), float(row[4]), float(row[5]), float(row[6]), float(row[7]) != 0, float(row[8]), int(row[9]), float(row[10]), float(row[11]), float(row[12])))
         elif row[0] == "neu->sec":
             tac = int(row[1])
+            if tac >= maxtact:
+                break
             neu = int(row[2])
             s = int(row[3])
 
@@ -483,67 +487,4 @@ def update_sli_all_actions(val):
 sli.on_changed(update_sli_all_actions)
 
 plt.get_current_fig_manager().canvas.set_window_title('L - max weights for actions')
-plt.show()
-
-RecField = []
-maxs = np.zeros(5)
-with open('ping-pong-environment.log', newline = '') as fil:
-    csr = csv.reader(fil)
-    for row in csr:
-        RecField.append([np.zeros(nSpatialZones), np.zeros(nSpatialZones), np.zeros(nVelocityZones), np.zeros(nVelocityZones), np.zeros(nSpatialZones), np.zeros((nRelPos, nRelPos))])
-        i = 0
-        for v in row:
-            ind = i
-            if ind < nSpatialZones:
-                RecField[-1][0][ind] = int(v)
-                maxs[0] = max(maxs[0], int(v))
-            ind -= nSpatialZones
-            if 0 <= ind < nSpatialZones:
-                RecField[-1][1][ind] = int(v)
-                maxs[1] = max(maxs[1], int(v))
-            ind -= nSpatialZones
-            if 0 <= ind < nVelocityZones:
-                RecField[-1][2][ind] = int(v)
-                maxs[2] = max(maxs[2], int(v))
-            ind -= nVelocityZones
-            if 0 <= ind < nVelocityZones:
-                RecField[-1][3][ind] = int(v)
-                maxs[3] = max(maxs[3], int(v))
-            ind -= nVelocityZones
-            if 0 <= ind < nSpatialZones:
-                RecField[-1][4][ind] = int(v)
-                maxs[1] = max(maxs[1], int(v))
-            ind -= nSpatialZones
-            if 0 <= ind:
-                RecField[-1][5][int(ind / nRelPos)][ind % nRelPos] = int(v)
-                maxs[4] = max(maxs[4], int(v))
-            i += 1
-
-fig, ax = plt.subplots()
-axes_hist = [[] for i in range(len(RecField))]
-i = 1
-for j in range(len(RecField)):
-    for k in range(len(RecField[0]) - 1):
-        axes_hist[j].append(plt.subplot(len(RecField), len(RecField[0]) - 1, i))
-        i += 1
-i = 0
-for j in range(len(RecField)):
-    axes_hist[j][0].set_ylim(0, maxs[0])
-    axes_hist[j][0].plot(RecField[j][0])
-    if j == 0:
-        axes_hist[j][0].set_title('x')
-    axes_hist[j][1].set_ylim(0, maxs[1])
-    axes_hist[j][1].plot(coo, RecField[j][1], coo, RecField[j][4])
-    if j == 0:
-        axes_hist[j][1].set_title('y')
-    axes_hist[j][2].set_ylim(0, maxs[2])
-    axes_hist[j][2].plot(RecField[j][2])
-    if j == 0:
-        axes_hist[j][2].set_title('vx')
-    axes_hist[j][3].set_ylim(0, maxs[3])
-    axes_hist[j][3].plot(RecField[j][3])
-    if j == 0:
-        axes_hist[j][3].set_title('vy')
-    axes_hist[j][4].imshow(RecField[j][5], cmap = 'viridis', vmin = 0, vmax = maxs[4])
-plt.get_current_fig_manager().canvas.set_window_title('Bayes model')
 plt.show()

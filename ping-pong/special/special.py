@@ -11,8 +11,38 @@ nRelPos = 5
 
 nGoalLevels = 4
 
+nActions = 2
+nNeuronsperAction = 100
+
 mpl.rc('font', size=10)
 coo = np.arange(0, 30)
+
+state = []
+with open('ping_pong_state.csv', newline = '') as fil:
+    csr = csv.reader(fil)
+    for row in csr:
+        state.append([])
+        for v in row:
+            if len(v) > 0:
+                state[-1].append(float(v))
+        state[-1].append((-0.5 - state[-1][0]) * (-0.5 - state[-1][0]) + (state[-1][1] - state[-1][4]) * (state[-1][1] - state[-1][4]))
+
+neuLspikes = []
+with open('spikes.3.lst', newline = '') as fil:
+    csr = csv.reader(fil)
+    for row in csr:
+        if len(neuLspikes) == nActions * nNeuronsperAction:
+            break
+        neuLspikes.append([]);
+        Up = len(neuLspikes) > nNeuronsperAction
+        for v in row:
+            tact = int(v)
+            if not Up:
+
+            neuLspikes.append([tact])
+
+
+
 
 RecField = [[]]
 maxs = np.zeros((5, 5))
@@ -117,16 +147,6 @@ with open('rews.csv', newline = '') as fil:
     csr = csv.reader(fil)
     for row in csr:
         rews.append([int(row[0]), int(row[1])])
-
-state = []
-with open('ping_pong_state.csv', newline = '') as fil:
-    csr = csv.reader(fil)
-    for row in csr:
-        state.append([])
-        for v in row:
-            if len(v) > 0:
-                state[-1].append(float(v))
-        state[-1].append((-0.5 - state[-1][0]) * (-0.5 - state[-1][0]) + (state[-1][1] - state[-1][4]) * (state[-1][1] - state[-1][4]))
 
 ns = np.zeros((5, 4))
 nscor = np.zeros((5, 4))
