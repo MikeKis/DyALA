@@ -8,6 +8,7 @@ import math
 nSpatialZones = 30
 nVelocityZones = 9
 nRelPos = 5
+Action = 3 / nSpatialZones
 
 nGoalLevels = 4
 
@@ -38,8 +39,98 @@ with open('spikes.3.lst', newline = '') as fil:
         for v in row:
             tact = int(v)
             if not Up:
+                if state[tact][4] < state[tact][1]:
+                    eva = 0
+                elif state[tact][4] - state[tact][1] < Action / 2:
+                    eva = 1
+                else:
+                    eva = 2
+            else:
+                if state[tact][4] > state[tact][1]:
+                    eva = 0
+                elif state[tact][1] - state[tact][4] < Action / 2:
+                    eva = 1
+                else:
+                    eva = 2
+            neuLspikes[-1].append([tact, eva, state[tact][-1]])
 
-            neuLspikes.append([tact])
+
+
+fig, ax = plt.subplots(2, 1)
+ax[0].set_xlim(0, nNeuronsperAction)
+ax[1].set_xlim(0, nNeuronsperAction)
+
+def draw_DecisionCorrectness(tact):
+    ax[0].clear()
+    ax[1].clear()
+    neuLspi = [[b for b in a if tact * 200000 <= b[0] < (tact + 1) * 200000] for a in neuLspikes]
+    x = []
+    y = []
+    for i in range(nNeuronsperAction):
+        n = sum(True for a in neuLspi[i] if a[1] == 0)
+        if n > 0:
+            x.append(i)
+            y.append(n)
+    ax[0].stem(x, y, linefmt='red', markerfmt=',')
+    x = []
+    y = []
+    for i in range(nNeuronsperAction):
+        n = sum(True for a in neuLspi[i] if a[1] == 1)
+        if n > 0:
+            x.append(i + 0.3)
+            y.append(n)
+    ax[0].stem(x, y, linefmt='blue', markerfmt=',')
+    x = []
+    y = []
+    for i in range(nNeuronsperAction):
+        n = sum(True for a in neuLspi[i] if a[1] == 2)
+        if n > 0:
+            x.append(i + 0.6)
+            y.append(n)
+    ax[0].stem(x, y, linefmt='green', markerfmt=',')
+    x = []
+    y = []
+    for i in range(nNeuronsperAction):
+        n = sum(True for a in neuLspi[nNeuronsperAction + i] if a[1] == 0)
+        if n > 0:
+            x.append(i)
+            y.append(n)
+    ax[1].stem(x, y, linefmt='red', markerfmt=',')
+    x = []
+    y = []
+    for i in range(nNeuronsperAction):
+        n = sum(True for a in neuLspi[nNeuronsperAction + i] if a[1] == 1)
+        if n > 0:
+            x.append(i + 0.3)
+            y.append(n)
+    ax[1].stem(x, y, linefmt='blue', markerfmt=',')
+    x = []
+    y = []
+    for i in range(nNeuronsperAction):
+        n = sum(True for a in neuLspi[nNeuronsperAction + i] if a[1] == 2)
+        if n > 0:
+            x.append(i + 0.6)
+            y.append(n)
+    ax[1].stem(x, y, linefmt='green', markerfmt=',')
+    ax[0].set_xlim(0, nNeuronsperAction)
+    ax[1].set_xlim(0, nNeuronsperAction)
+
+draw_DecisionCorrectness(0)
+
+axsli = plt.axes([0.25, 0.03, 0.65, 0.03])
+sli = Slider(axsli, 'tact', 0, 4, valinit = 0, valstep = 1, valfmt = "%d")
+axsli.xaxis.set_visible(True)
+axsli.set_xticks(range(4))
+
+def update_sli_DecisionCorrectness(val):
+    tac = sli.val
+    draw_DecisionCorrectness(tac)
+
+sli.on_changed(update_sli_DecisionCorrectness)
+
+plt.get_current_fig_manager().canvas.set_window_title('correctness')
+plt.show()
+
 
 
 
@@ -139,7 +230,7 @@ def update_sli_Bayes(val):
 
 sli.on_changed(update_sli_Bayes)
 
-plt.get_current_fig_manager().canvas.set_window_title('Bayes model')
+plt.get_current_fig_manager().canvas.set_window_title('correctness')
 plt.show()
 
 rews = []
