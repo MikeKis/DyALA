@@ -47,7 +47,7 @@ const int nRelPos = 5;
 const float rRelPosStep = RACKET_SIZE / 3;   // Racket takes 3 middle positions of the nRelPos x nRelPos grid.
 const unsigned nInputs = 3 * nSpatialZones + 2 * nVelocityZones + nRelPos * nRelPos;
 
-const float rAction = 3.F / nSpatialZones;
+const float rAction = 1.F / nSpatialZones;
 
 const float rStateFiringFrequency = 0.3F;
 
@@ -340,7 +340,8 @@ public:
 	{
 		reward,
 		punishment,
-		_debug_rewnorm
+		_debug_rewnorm,
+		_debug_punishment
 	};
 private:
 	enum Evaluator::type typ;
@@ -353,7 +354,7 @@ protected:
 	virtual void GetMeanings(VECTOR<STRING> &vstr_Meanings) const
 	{
 		vstr_Meanings.resize(1);
-		vstr_Meanings.front() = typ == reward ? "REW" : typ == punishment ? "PUN" : "$$$rewnorm";
+		vstr_Meanings.front() = typ == reward ? "REW" : typ == punishment ? "PUN" : typ == _debug_rewnorm ? "$$$rewnorm" : "$$$punishment";
 	}
 public:
 	Evaluator(enum Evaluator::type t) : IReceptors(1), typ(t) {}
@@ -375,11 +376,16 @@ public:
 								b_forVerifier_Reward = true;
 							 }
 							 break;
-			default:         *prec = CurrentLevel < curlev ? 1 : 0;
+			case _debug_rewnorm: *prec = CurrentLevel < curlev ? 1 : 0;
 						     curlev = CurrentLevel;
 							 if (*prec)
-								 ofsrews << ntact << ',' << CurrentLevel << endl;
+								 ofsrews << ntact << ',1,' << CurrentLevel << endl;
 				             return true;
+			default: *prec = CurrentLevel > curlev ? 1 : 0;
+				curlev = CurrentLevel;
+				if (*prec)
+					ofsrews << ntact << ',0,' << CurrentLevel << endl;
+				return true;
 		}
 		*prec = 0;
 		if (TrainCounter && !--PeriodCounter) {
@@ -465,10 +471,11 @@ PING_PONG_ENVIRONMENT_EXPORT IReceptors *SetParametersIn(int &nReceptors, const 
 			    return new Evaluator(Evaluator::punishment);
 		case 2: nReceptors = 1;
 			    return new Evaluator(Evaluator::reward);
-		case 3: return papG = new AdaptivePoisson(nReceptors);
 
-		case 4: nReceptors = 1;
+		case 3: nReceptors = 1;
 				return new Evaluator(Evaluator::_debug_rewnorm);
+		case 4: nReceptors = 1;
+			    return new Evaluator(Evaluator::_debug_punishment);
 
 		default: cout << "Too many calls of SetParametersIn\n";
 				exit(-1);
@@ -498,22 +505,18 @@ PING_PONG_ENVIRONMENT_EXPORT IReceptors *LoadStatus(Serializer &ser)
 	}
 }
 
-PING_PONG_ENVIRONMENT_EXPORT void SetParametersOut(int ExperimentId, size_t tactTermination, unsigned nOutputNeurons, const pugi::xml_node &xn) {}
+int nNeuronsperAction;
+
+PING_PONG_ENVIRONMENT_EXPORT void SetParametersOut(int ExperimentId, size_t tactTermination, unsigned nOutputNeurons, const pugi::xml_node &xn) {nNeuronsperAction = (int)nOutputNeurons / 2;}
 
 PING_PONG_ENVIRONMENT_EXPORT bool ObtainOutputSpikes(const vector<int> &v_Firing, int nEquilibriumPeriods)
 {
-	if (v_Firing.size() == 1) {
-		if (v_Firing.front()) {
-			*es.prRacket += rAction;
-			if (*es.prRacket > 0.5F - RACKET_SIZE / 2)
-				*es.prRacket = 0.5F - RACKET_SIZE / 2;
-		} else {
-			*es.prRacket -= rAction;
-			if (*es.prRacket < -0.5F + RACKET_SIZE / 2)
-				*es.prRacket = -0.5F + RACKET_SIZE / 2;
-		}
-		papG->RegisterAction();
-	}
+	int nCommandsDown = count_if(v_Firing.begin(), v_Firing.end(), bind2nd(less<int>(), nNeuronsperAction));
+	*es.prRacket += rAction * ((int)v_Firing.size() - 2 * nCommandsDown);
+	if (*es.prRacket > 0.5F - RACKET_SIZE / 2)
+		*es.prRacket = 0.5F - RACKET_SIZE / 2;
+	else if (*es.prRacket < -0.5F + RACKET_SIZE / 2)
+		*es.prRacket = -0.5F + RACKET_SIZE / 2;
 
 	if (ntact && !(ntact % 200000)) {
 		for (int z = 0; z <= nGoalLevels; ++z)

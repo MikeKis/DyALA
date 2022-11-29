@@ -8,10 +8,9 @@ import statistics
 import bisect
 import math
 
-file = "monitoring.3.csv"
-ReceptorSectionBoundaries = [133,134,135,335]
-indLA = [0, 200]
-indLrew = [203, 273]
+file = "monitoring.4.csv"
+ReceptorSectionBoundaries = [133,134,135,136,13]
+indLA = [0, 20]
 
 nActions = 2
 
@@ -36,8 +35,8 @@ Link = namedtuple('Link', 'tact,neu,type,indsyn,minW,maxW,Is_pla,delay,src,effw,
 tact = []
 neusec = []
 migrations = []
-neuint = [0 for i in range(indLrew[1] - indLrew[0])]
 neuintA = [0 for i in range(indLA[1] - indLA[0])]
+stabilityA = [[] for i in range(indLA[1] - indLA[0])]
 
 maxtact = 1000000
 
@@ -84,19 +83,11 @@ with open(file, newline = '') as fil:
             migrations[-1] += 1
         elif row[0] == "neu":
             neu = int(row[2])
-            if indLrew[0] <= neu < indLrew[1]:
-                neuint[neu - indLrew[0]] += int(row[3])
-            elif indLA[0] <= neu < indLA[1]:
+            if indLA[0] <= neu < indLA[1]:
                 neuintA[neu - indLA[0]] += int(row[3])
+                stabilityA[neu - indLA[0]].append(int(row[12]))
 
-nDopamineLevels = int(math.log2(len(neuint) / nPrimaryStateRecognizers + 1));
-LevelRepresentatives = []
 nNeuronsperAction = int((indLA[1] - indLA[0]) / nActions)
-liml = 0
-limh = nPrimaryStateRecognizers
-for j in range(nDopamineLevels):
-    LevelRepresentatives.append(np.argsort(np.array(neuint[liml:limh]))[-nPrimaryStateRecognizers:] + liml)
-    liml, limh = limh, limh + (limh - liml) * 2
 
 ActionRepresentatives = []
 for j in range(nActions):
@@ -120,6 +111,14 @@ for j in range(nSectionsperNetwork):
 leg = axs.legend(loc = 'best', ncol = 2, mode = "expand", shadow = True, fancybox = True)
 leg.get_frame().set_alpha(0.5)
 plt.title('Section relative activity')
+plt.show()
+
+fig, ax = plt.subplots(2, 1)
+for j in range(nNeuronsperAction):
+    ax[0].plot(stabilityA[j])
+for j in range(nNeuronsperAction):
+    ax[1].plot(stabilityA[nNeuronsperAction + j])
+plt.title('Neuron stability')
 plt.show()
 
 print("mean section intensity:")
@@ -166,7 +165,6 @@ while i <= len(lin):
         if not end:
             if tactNo < 0 or lin[i].tact != tact[tactNo]:
                 sat_sup_dist.append({})
-                RecField.append([[np.zeros(nSpatialZones), np.zeros(nSpatialZones), np.zeros(nVelocityZones), np.zeros(nVelocityZones), np.zeros(nSpatialZones), np.zeros((nRelPos, nRelPos))] for i in range(indLrew[1] - indLrew[0])])
                 RecFieldA.append([[np.zeros(nSpatialZones), np.zeros(nSpatialZones), np.zeros(nVelocityZones), np.zeros(nVelocityZones), np.zeros(nSpatialZones), np.zeros((nRelPos, nRelPos))] for i in range(indLA[1] - indLA[0])])
                 tactNo += 1
                 print('Now tact %d is processed' % tact[tactNo])
@@ -197,26 +195,7 @@ while i <= len(lin):
                 else:
                     deffw_sum[strLink][-1] += abs(effw[i])
 
-                if indLrew[0] <= lin[i].neu < indLrew[1] and 0 <= lin[i].src < ReceptorSectionBoundaries[0]:
-                    ind = lin[i].src
-                    if ind < nSpatialZones:
-                        RecField[-1][lin[i].neu - indLrew[0]][0][ind] = lin[i].W
-                    ind -= nSpatialZones
-                    if 0 <= ind < nSpatialZones:
-                        RecField[-1][lin[i].neu - indLrew[0]][1][ind] = lin[i].W
-                    ind -= nSpatialZones
-                    if 0 <= ind < nVelocityZones:
-                        RecField[-1][lin[i].neu - indLrew[0]][2][ind] = lin[i].W
-                    ind -= nVelocityZones
-                    if 0 <= ind < nVelocityZones:
-                        RecField[-1][lin[i].neu - indLrew[0]][3][ind] = lin[i].W
-                    ind -= nVelocityZones
-                    if 0 <= ind < nSpatialZones:
-                        RecField[-1][lin[i].neu - indLrew[0]][4][ind] = lin[i].W
-                    ind -= nSpatialZones
-                    if 0 <= ind:
-                        RecField[-1][lin[i].neu - indLrew[0]][5][int(ind / nRelPos)][ind % nRelPos] = lin[i].W
-                elif indLA[0] <= lin[i].neu < indLA[1] and 0 <= lin[i].src < ReceptorSectionBoundaries[0]:
+                if  indLA[0] <= lin[i].neu < indLA[1] and 0 <= lin[i].src < ReceptorSectionBoundaries[0]:
                     ind = lin[i].src
                     if ind < nSpatialZones:
                         RecFieldA[-1][lin[i].neu - indLA[0]][0][ind] = lin[i].W
@@ -250,20 +229,6 @@ while i <= len(lin):
             NLinksofThisType[strLink] += 1
     cnt += 1
     i += 1
-
-rfmax = []
-
-for rf in RecField:
-    rfm = []
-    liml = 0
-    limh = nPrimaryStateRecognizers
-    for j in range(nDopamineLevels):
-        z = rf[liml:limh]
-        y = [[a[k] for a in z] for k in range(len(z[0]))]
-        ww = [np.amax(k, axis=0) for k in y]
-        rfm.append(ww)
-        liml, limh = limh, limh + (limh - liml) * 2
-    rfmax.append(rfm)
 
 rfmaxA = []
 
@@ -332,84 +297,6 @@ def draw_rec_fields(tac, reps, rec_fields):
         if j == 0:
             axes_hist[j][3].set_title('vy')
         axes_hist[j][4].imshow(rec_fields[indtact][reps[j]][5], cmap = 'seismic', vmin = -30, vmax = 30, norm = norm)
-
-curdoplev = 0
-
-for reps in LevelRepresentatives:
-
-    fig, ax = plt.subplots()
-    axes_hist = [[] for i in range(nPrimaryStateRecognizers)]
-    i = 1
-    for j in range(nPrimaryStateRecognizers):
-        for k in range(len(RecField[0][0]) - 1):
-            axes_hist[j].append(plt.subplot(nPrimaryStateRecognizers, len(RecField[0][0]) - 1, i))
-            i += 1
-
-    draw_rec_fields(0, reps, RecField)
-
-    axsli = plt.axes([0.25, 0.03, 0.65, 0.03])
-    sli = Slider(axsli, 'tact', 0., tact[-1], valinit = 0, valstep = tact[1], valfmt = "%d")
-    axsli.xaxis.set_visible(True)
-    axsli.set_xticks(tact)
-
-    def update_sli(val):
-        tac = sli.val
-        draw_rec_fields(tac, reps, RecField)
-
-    sli.on_changed(update_sli)
-
-    plt.get_current_fig_manager().canvas.set_window_title('Lrew receptive fields (dopamine level %d)' % (curdoplev,))
-    plt.show()
-    curdoplev += 1
-
-fig, ax = plt.subplots()
-axes_hist = [[] for i in range(nDopamineLevels)]
-i = 1
-for j in range(nDopamineLevels):
-    for k in range(len(RecField[0][0]) - 1):
-        axes_hist[j].append(plt.subplot(nDopamineLevels, len(RecField[0][0]) - 1, i))
-        i += 1
-plt.title('Lrew receptive fields')
-
-def draw_rec_fields_all_levels(tac):
-    indtact = tact.index(tac)
-    i = 0
-    for j in range(nDopamineLevels):
-        for k in range(len(RecField[0][0]) - 1):
-            axes_hist[j][k].clear()
-        axes_hist[j][0].set_ylim(-30, 30)
-        axes_hist[j][0].plot(rfmax[indtact][j][0])
-        if j == 0:
-            axes_hist[j][0].set_title('x')
-        axes_hist[j][1].set_ylim(-30, 30)
-        axes_hist[j][1].plot(coo, rfmax[indtact][j][1], coo, rfmax[indtact][j][4])
-        if j == 0:
-            axes_hist[j][1].set_title('y')
-        axes_hist[j][2].set_ylim(-30, 30)
-        axes_hist[j][2].plot(rfmax[indtact][j][2])
-        if j == 0:
-            axes_hist[j][2].set_title('vx')
-        axes_hist[j][3].set_ylim(-30, 30)
-        axes_hist[j][3].plot(rfmax[indtact][j][3])
-        if j == 0:
-            axes_hist[j][3].set_title('vy')
-        axes_hist[j][4].imshow(rfmax[indtact][j][5], cmap = 'seismic', vmin = -30, vmax = 30, norm = norm)
-
-draw_rec_fields_all_levels(0)
-
-axsli = plt.axes([0.25, 0.03, 0.65, 0.03])
-sli = Slider(axsli, 'tact', 0., tact[-1], valinit = 0, valstep = tact[1], valfmt = "%d")
-axsli.xaxis.set_visible(True)
-axsli.set_xticks(tact)
-
-def update_sli_all_levels(val):
-    tac = sli.val
-    draw_rec_fields_all_levels(tac)
-
-sli.on_changed(update_sli_all_levels)
-
-plt.get_current_fig_manager().canvas.set_window_title('Lrew - max weights for dopamine levels')
-plt.show()
 
 curact = 'down'
 
