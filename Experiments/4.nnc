@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SNN>
+  <Global>0</Global>
+  <!--NOT USED ???-->
+  <Receptors name="R" N="133">
+    <Implementation lib="ping-pong-environment"></Implementation>
+  </Receptors>
+  <Receptors name="Punishment" N="1">
+    <!--NOT USED NOW-->
+    <Implementation lib="ping-pong-environment"></Implementation>
+  </Receptors>
+  <Receptors name="Reward" N="1">
+    <Implementation lib="ping-pong-environment"></Implementation>
+  </Receptors>
+  <Receptors name="$$$Reward" N="1">
+    <Implementation lib="ping-pong-environment"></Implementation>
+  </Receptors>
+  <Receptors name="$$$Punishment" N="1">
+    <Implementation lib="ping-pong-environment"></Implementation>
+  </Receptors>
+  <Network>
+    <Implementation lib="DyALA">
+      <args>
+        <NACTIONS>2</NACTIONS>
+        <NPRIMARYSTATERECOGNIZERS>10</NPRIMARYSTATERECOGNIZERS>
+      </args>
+    </Implementation>
+  </Network>
+   <Readout lib="ping-pong-environment">
+    <output>L</output>
+  </Readout>
+  <Verifyer lib="ping-pong-environment"></Verifyer>
+</SNN>  
