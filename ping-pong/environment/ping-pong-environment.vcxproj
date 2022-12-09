@@ -166,6 +166,7 @@
     <ClInclude Include="ping-pong-environment.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\pugixml-1.10\src\pugixml.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="ping-pong-environment.cpp" />
   </ItemGroup>

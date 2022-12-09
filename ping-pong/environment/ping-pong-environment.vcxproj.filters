@@ -29,6 +29,9 @@
     <ClCompile Include="ping-pong-environment.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\pugixml-1.10\src\pugixml.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="ping-pong-environment.def">

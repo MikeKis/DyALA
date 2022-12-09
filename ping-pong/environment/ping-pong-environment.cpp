@@ -184,8 +184,8 @@ const int prerewardperiod = LevelDuration * nGoalLevels;
 map<vector<int>, vector<int> > mvindvn_;
 int BayesModel[nGoalLevels + 1][nInputs];
 int nRewardedTacts = 0;
-ofstream ofsrews("rews.csv");
-ofstream ofsBayes("Bayes.csv");
+//ofstream ofsrews("rews.csv");
+//ofstream ofsBayes("Bayes.csv");
 double d2cur = 0.;
 
 class DYNAMIC_LIBRARY_EXPORTED_CLASS rec_ping_pong: public IReceptors
@@ -194,7 +194,7 @@ class DYNAMIC_LIBRARY_EXPORTED_CLASS rec_ping_pong: public IReceptors
 protected:
 	virtual bool bGenerateReceptorSignals(char *prec, size_t neuronstrsize) override
 	{
-		static ofstream ofsState("ping_pong_state.csv");
+//		static ofstream ofsState("ping_pong_state.csv");
 		vector<float> vr_PhaseSpacePoint(5);
 
 		vector<int> vind_(6);
@@ -206,9 +206,10 @@ protected:
 #define indRaster vind_[5]
 
 		UpdateWorld(vr_PhaseSpacePoint);
+		/*
 		for (auto z: vr_PhaseSpacePoint)
 			ofsState << z << ',';
-		ofsState << endl;
+		ofsState << endl; */
 		indxBall = (int)((vr_PhaseSpacePoint[0] + 0.5) / (1. / nSpatialZones));
 		if (indxBall == nSpatialZones)
 			indxBall = nSpatialZones - 1;
@@ -324,14 +325,16 @@ public:
 	}
 };
 
-int RewardPunishmentBalance = 0;
 int nRewards = 0;
 int nPunishments = 0;
+int nRewardsTot = 0;
+int nPunishmentsTot = 0;
 
 const int RewardTrainLength = 10;
 const int RewardTrainPeriod = 2;
 
 bool b_forVerifier_Reward = false;
+size_t tactStart = 0;
 
 class DYNAMIC_LIBRARY_EXPORTED_CLASS Evaluator: public IReceptors
 {
@@ -357,34 +360,36 @@ protected:
 		vstr_Meanings.front() = typ == reward ? "REW" : typ == punishment ? "PUN" : typ == _debug_rewnorm ? "$$$rewnorm" : "$$$punishment";
 	}
 public:
-	Evaluator(enum Evaluator::type t) : IReceptors(1), typ(t) {}
+	Evaluator(enum Evaluator::type t, size_t tactbeg = 0) : IReceptors(1), typ(t) {}
 	virtual bool bGenerateReceptorSignals(char *prec, size_t neuronstrsize) override
 	{
 		switch (typ) {
 			case punishment: if (es.pprr_Ball->first < -0.5F) {
 								TrainCounter = RewardTrainLength;
 								PeriodCounter = 1;
-								--RewardPunishmentBalance;
+								if (ntact >= tactStart)
+									++nPunishmentsTot;
 								++nPunishments;
 							 }
 							 break;
 			case reward:     if (es.pprr_Ball->first == -0.5F) {
 								TrainCounter = RewardTrainLength;
 								PeriodCounter = 1;
-								++RewardPunishmentBalance;
+								if (ntact >= tactStart)
+									++nRewardsTot;
 								++nRewards;
 								b_forVerifier_Reward = true;
 							 }
 							 break;
 			case _debug_rewnorm: *prec = CurrentLevel < curlev ? 1 : 0;
 						     curlev = CurrentLevel;
-							 if (*prec)
-								 ofsrews << ntact << ',1,' << CurrentLevel << endl;
+//							 if (*prec)
+//								 ofsrews << ntact << ',1,' << CurrentLevel << endl;
 				             return true;
 			default: *prec = CurrentLevel > curlev ? 1 : 0;
 				curlev = CurrentLevel;
-				if (*prec)
-					ofsrews << ntact << ',0,' << CurrentLevel << endl;
+//				if (*prec)
+//					ofsrews << ntact << ',0,' << CurrentLevel << endl;
 				return true;
 		}
 		*prec = 0;
@@ -507,7 +512,11 @@ PING_PONG_ENVIRONMENT_EXPORT IReceptors *LoadStatus(Serializer &ser)
 
 int nNeuronsperAction;
 
-PING_PONG_ENVIRONMENT_EXPORT void SetParametersOut(int ExperimentId, size_t tactTermination, unsigned nOutputNeurons, const pugi::xml_node &xn) {nNeuronsperAction = (int)nOutputNeurons / 2;}
+PING_PONG_ENVIRONMENT_EXPORT void SetParametersOut(int ExperimentId, size_t tactTermination, unsigned nOutputNeurons, const pugi::xml_node &xn) 
+{
+	nNeuronsperAction = (int)nOutputNeurons / 2;
+	tactStart = atoi_s(xn.child("start_time").child_value());
+}
 
 PING_PONG_ENVIRONMENT_EXPORT bool ObtainOutputSpikes(const vector<int> &v_Firing, int nEquilibriumPeriods)
 {
@@ -519,10 +528,11 @@ PING_PONG_ENVIRONMENT_EXPORT bool ObtainOutputSpikes(const vector<int> &v_Firing
 		*es.prRacket = -0.5F + RACKET_SIZE / 2;
 
 	if (ntact && !(ntact % 200000)) {
+		/*
 		for (int z = 0; z <= nGoalLevels; ++z)
 			FORI(nInputs)
 				ofsBayes << BayesModel[z][_i] << (_i < nInputs - 1 ? ',' : '\n');
-		ofsBayes << endl;
+		ofsBayes << endl; */
 		cout << "rew " << nRewards << " pun " << nPunishments << endl;
 		nRewards = nPunishments = 0;
 	}
@@ -537,13 +547,13 @@ int nCorr = 0;
 
 PING_PONG_ENVIRONMENT_EXPORT int Finalize(int OriginalTerminationCode) 
 {
-
+	/*
 	for (int z = 0; z <= nGoalLevels; ++z)
 		FORI(nInputs)
 			ofsBayes << BayesModel[z][_i] << (_i < nInputs - 1 ? ',' : '\n');
-
+	*/
 	cout << "rew " << nRewards << " pun " << nPunishments << endl;
-	return 5000 + RewardPunishmentBalance;
+	return nRewardsTot * 10000 / (nPunishmentsTot + nRewardsTot);
 }
 
 PING_PONG_ENVIRONMENT_EXPORT void Serialize(Serializer &ser, bool bSave) {}
