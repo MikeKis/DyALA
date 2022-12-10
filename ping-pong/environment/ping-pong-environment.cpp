@@ -85,6 +85,7 @@ class EnvironmentState
 	unique_ptr<shared_memory_object> shm;
 	unique_ptr<mapped_region>        region;
 	string                           strSharedMemoryName;
+	pair<pair<float, float>, float>  pprrr_LocalState;
 public:
 	pair<float, float> *pprr_Ball;
 	float              *prRacket = NULL;
@@ -92,28 +93,18 @@ public:
 	{
 		strSharedMemoryName = ENVIRONMENT_STATE_SHARED_MEMORY_NAME;
 		bool bExists = true;
-		do {
-			try {
-				//Create a shared memory object.
-				shm.reset(new shared_memory_object(open_only, strSharedMemoryName.c_str(), read_only));
-				++strSharedMemoryName.front();
-			}
-			catch (...) {
-				bExists = false;
-			}
-		} while (bExists);
-		//Create a shared memory object.
-		shm.reset(new shared_memory_object(create_only, strSharedMemoryName.c_str(), read_write));
-
-		//Set size
-		shm->truncate(sizeof(pair<pair<float, float>, float>));
-
-		//Map the whole shared memory in this process
-		region.reset(new mapped_region(*shm, read_write));
-		pprr_Ball = (pair<float, float> *)region->get_address();
+		try {
+			shm.reset(new shared_memory_object(open_only, strSharedMemoryName.c_str(), read_write));
+		} catch (...) {
+			bExists = false;
+		}
+		if (bExists) {
+			//Map the whole shared memory in this process
+			region.reset(new mapped_region(*shm, read_write));
+			pprr_Ball = (pair<float, float> *)region->get_address();
+		} else pprr_Ball = &pprrr_LocalState.first;
 	}
 	void ResetBall();
-	~EnvironmentState() {shared_memory_object::remove(strSharedMemoryName.c_str());}
 } es;
 
 pair<float, float> prr_BallSpeed;

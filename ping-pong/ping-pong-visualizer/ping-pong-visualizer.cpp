@@ -21,38 +21,27 @@ class EnvironmentState
 public:
 	volatile pair<float, float> *pprr_Ball;
 	volatile float              *prRacket = NULL;
-	EnvironmentState(bool bDestroyOldState)
+	EnvironmentState()
 	{
-		if (!bDestroyOldState)
-			do {
-				try {
-					//Create a shared memory object.
-					shm.reset(new shared_memory_object(open_only, ENVIRONMENT_STATE_SHARED_MEMORY_NAME, read_only));
+		try {
+			//Create a shared memory object.
+			shm.reset(new shared_memory_object(open_or_create, ENVIRONMENT_STATE_SHARED_MEMORY_NAME, read_only));
 
-					//Map the whole shared memory in this process
-					region.reset(new mapped_region(*shm, read_only));
-					pprr_Ball = (volatile pair<float, float> *)region->get_address();
-					prRacket = &((volatile pair<pair<float, float>, float> *)pprr_Ball)->second;
-				} catch (...) {
-					boost::this_thread::sleep(boost::posix_time::seconds(1));
-				}
-			} while (!prRacket);
-		else {
-			string strSharedMemoryName = ENVIRONMENT_STATE_SHARED_MEMORY_NAME;
-			bool bExists = true;
-			do {
-				try {
-					//Create a shared memory object.
-					shm.reset(new shared_memory_object(open_only, strSharedMemoryName.c_str(), read_only));
-					shared_memory_object::remove(strSharedMemoryName.c_str());
-					++strSharedMemoryName.front();
-				} catch (...) {
-					bExists = false;
-				}
-			} while (bExists);
+			//Map the whole shared memory in this process
+			region.reset(new mapped_region(*shm, read_only));
+			//Set size
+			shm->truncate(sizeof(pair<pair<float, float>, float>));
+
+			//Map the whole shared memory in this process
+			region.reset(new mapped_region(*shm, read_write));
+			pprr_Ball = (volatile pair<float, float> *)region->get_address();
+			prRacket = &((volatile pair<pair<float, float>, float> *)pprr_Ball)->second;
+		} catch (...) {
+			cout << "Cannot access " ENVIRONMENT_STATE_SHARED_MEMORY_NAME "\n";
+			exit(-1);
 		}
 	}
-	~EnvironmentState() {}
+	~EnvironmentState() {shared_memory_object::remove(ENVIRONMENT_STATE_SHARED_MEMORY_NAME);}
 };
 
 inline float rPixelX(float rPhysical) {return (rPhysical + 0.5F) * RASTER_SIZE;}
@@ -60,14 +49,8 @@ inline float rPixelY(float rPhysical) {return (0.5F - rPhysical) * RASTER_SIZE;}
 
 int main(int ARGC, char *ARGV[])
 {
-	bool bDestroyOldState = ARGC == 2;
-	cout << "Waiting for ping-pong data availability...\n";
-	EnvironmentState es(bDestroyOldState);
-	if (bDestroyOldState) {
-		cout << "All resident ping-pong data are destroyed\n";
-		exit(0);
-	}
-	cout << "ping-pong data are obtained\n";
+	EnvironmentState es;
+	cout << "ping-pong data can be accessed\n";
 	// Create the main window
 	sf::RenderWindow window(sf::VideoMode(RASTER_SIZE, RASTER_SIZE), "ping-pong", sf::Style::Close);
 	sf::CircleShape circle;
