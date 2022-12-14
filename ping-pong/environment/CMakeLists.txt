@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 3.14)
-set(CMAKE_CXX_COMPILER "/usr/bin/g++")
+# set(CMAKE_CXX_COMPILER "/usr/bin/g++")
 set(CMAKE_CXX_STANDARD 14)
-
-include_directories(../../../ArNI)
 
 project(ping-pong-environment CXX)
 

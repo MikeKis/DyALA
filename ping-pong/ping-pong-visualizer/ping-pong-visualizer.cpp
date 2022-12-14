@@ -25,15 +25,15 @@ public:
 	{
 		try {
 			//Create a shared memory object.
-			shm.reset(new shared_memory_object(open_or_create, ENVIRONMENT_STATE_SHARED_MEMORY_NAME, read_only));
+			shm.reset(new shared_memory_object(open_or_create, ENVIRONMENT_STATE_SHARED_MEMORY_NAME, read_write));
+			cout << ENVIRONMENT_STATE_SHARED_MEMORY_NAME " created\n";
+			//Set size
+			shm->truncate(sizeof(pair<pair<float, float>, float>));
+			cout << ENVIRONMENT_STATE_SHARED_MEMORY_NAME " size set\n";
 
 			//Map the whole shared memory in this process
 			region.reset(new mapped_region(*shm, read_only));
-			//Set size
-			shm->truncate(sizeof(pair<pair<float, float>, float>));
-
-			//Map the whole shared memory in this process
-			region.reset(new mapped_region(*shm, read_write));
+			cout << ENVIRONMENT_STATE_SHARED_MEMORY_NAME " mapped\n";
 			pprr_Ball = (volatile pair<float, float> *)region->get_address();
 			prRacket = &((volatile pair<pair<float, float>, float> *)pprr_Ball)->second;
 		} catch (...) {
