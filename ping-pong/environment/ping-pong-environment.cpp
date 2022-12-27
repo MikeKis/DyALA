@@ -1,9 +1,7 @@
 /*
-Copyright (C) 2021 Mikhail Kiselev
-Автор Михаил Витальевич Киселев.
-При модификации файла сохранение указания (со)авторства Михаила Витальевича Киселева обязательно.
+Copyright (C) 2022 Mikhail Kiselev
 
-Emulates signal from videocamera looking at a moving light spot.
+Emulates ping-pong game.
 
 */
 
@@ -19,6 +17,7 @@ Emulates signal from videocamera looking at a moving light spot.
 #include <deque>
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
+#include <boost/numeric/ublas/symmetric.hpp>
 
 #include <sg/sg.h>
 #include <NetworkConfigurator.h>
@@ -37,6 +36,9 @@ typedef unsigned __int64 UNS64;
 
 using namespace std;
 using namespace boost::interprocess;
+using namespace boost::numeric;
+
+DECLARE_UNION_OPERATORS(set<unsigned>)
 
 const unsigned minSpotPassageTime_ms = 300;
 const unsigned maxSpotPassageTime_ms = 1000;
@@ -49,9 +51,8 @@ const unsigned nInputs = 3 * nSpatialZones + 2 * nVelocityZones + nRelPos * nRel
 
 const float rAction = 1.F / nSpatialZones;
 
-const float rStateFiringFrequency = 0.3F;
-
-#define SIGNAL_ON rng() < rStateFiringFrequency
+const float rStartingStateFiringFrequency = 0.3F;
+const int NeuronTimeDepth = 10;
 
 class RandomNumberGenerator
 {
@@ -161,27 +162,277 @@ void UpdateWorld(vector<float> &vr_PhaseSpacePoint)
 }
 
 int ntact = 0;
-
-// const double adLevelBoundaries[] = {0.27915265777848186 * 0.27915265777848186, 0.2997424323017368 * 0.2997424323017368, 0.3435725359161685 * 0.3435725359161685, 0.4109012910954389 * 0.4109012910954389};
-const double adLevelBoundaries[] = {0.04, 0.16, 0.36, 0.64};
-const int nGoalLevels = sizeof(adLevelBoundaries) / sizeof(adLevelBoundaries[0]);
+const int nGoalLevels = 4;
 const int LevelDuration = 100;
-deque<vector<bool> > qvb_Neuron, qvb_;
-const int NeuronDepth = 30;
-vector<int> vn_Neuron(nInputs, 0);
-vector<bool> vb_Neuron(nInputs, false);
+const int LevelNeuronPeriod = LevelDuration / NeuronTimeDepth;
+const int minnSignificantExtraSpikes = 10;
 int CurrentLevel = nGoalLevels;
+
+class ClusterBayes
+{
+    map<vector<unsigned>, vector<double> >     mvvd_BayesModel;
+    vector<double>                             vd_BayesPriors;
+    deque<vector<bool> >                       qvb_RecentNeuronInput;
+    deque<vector<bool> >                       qvb_NeuronInput;
+    vector<vector<vector<bool> > >             vvvb_byLevels;
+    vector<int>                                vn_Neuron;
+    size_t                                     ntotMeasurements = 0;
+    ublas::symmetric_matrix<vector<unsigned> > smvn_Pairs;
+    map<unsigned,map<unsigned, double> >       mmd_AssociatedPairs;
+    size_t nLevelMeasurements(int Level) const {return vvvb_byLevels[Level].size();}
+public:
+    ClusterBayes(): vvvb_byLevels(nGoalLevels + 1), vn_Neuron(nInputs, 0), smvn_Pairs(nInputs), vd_BayesPriors(nGoalLevels + 1, 0.)
+    {
+        fill(smvn_Pairs.begin1(), smvn_Pairs.end1(), vector<unsigned>(nGoalLevels + 1, 0));
+    }
+    int Predict(const vector<bool> &vb_Spikes);
+    void FixReward();
+    bool bClusterFeatureIsOK(const set<unsigned> &s_) const
+    {
+        int j;
+        FOR_(j, nGoalLevels) {
+            auto n = count_if(vvvb_byLevels[j].begin(), vvvb_byLevels[j].end(), [&](const vector<bool> &vb_){return all_of(s_.begin(), s_.end(), [&](unsigned ind){return vb_[ind];});});
+            if (n >= 4) {
+                double d = 1.;
+                set<unsigned>::const_iterator k;
+                FORI(s_.size()) {
+                    d *= smvn_Pairs(_i, _i)[j];
+                    if (_i)
+                        d /= nLevelMeasurements(j);
+                }
+                if ((n - d) * s_.size() > minnSignificantExtraSpikes)
+                    break;
+            }
+        }
+        return j < nGoalLevels;
+    }
+};
+
+template<class LINKS, class CLUSTER, class MERGER> void AgglomerativeClustering(const LINKS &PairedAssociations, LIST<CLUSTER> &l_Result, const MERGER &mer)
+{
+    typename LIST<CLUSTER>::iterator ExistingCluster;
+    for (const auto &i: PairedAssociations) {
+        auto i1 = find_if(l_Result.begin(), l_Result.end(), [&](const CLUSTER &c) {return c.bIncludes(i.Node1());});
+        auto i2 = find_if(l_Result.begin(), l_Result.end(), [&](const CLUSTER &c) {return c.bIncludes(i.Node2());});
+        CLUSTER *pnewcluster;
+        if (i1 == l_Result.end() && i2 == l_Result.end())
+            l_Result.push_back(CLUSTER(i));
+        else if (i1 == l_Result.end() || i2 == l_Result.end()) {
+            if (i1 == l_Result.end()) {
+                ExistingCluster = i2;
+                auto FreeObject = i.Node1();
+                auto ObjectinExistingCluster = i.Node2();
+                pnewcluster = mer(*ExistingCluster, FreeObject, ObjectinExistingCluster, i);
+            } else {
+                ExistingCluster = i1;
+                auto FreeObject = i.Node2();
+                auto ObjectinExistingCluster = i.Node1();
+                pnewcluster = mer(*ExistingCluster, FreeObject, ObjectinExistingCluster, i);
+            }
+            if (pnewcluster) {
+                *ExistingCluster = *pnewcluster;
+                delete pnewcluster;
+            }
+        } else if (i1 != i2) {
+            pnewcluster = mer(*i1, *i2, i);
+            if (pnewcluster) {
+                *i1 = *pnewcluster;
+                l_Result.erase(i2);
+                delete pnewcluster;
+            }
+        } else i1->AddLink(i);
+    }
+}
+
+class FeaturePair: public pair<double, pair<unsigned, unsigned> >
+{
+public:
+    FeaturePair(double dsig, unsigned ind1, unsigned ind2)
+    {
+        first = dsig;
+        second.first = ind1;
+        second.second = ind2;
+    }
+    unsigned Node1() const {return second.first;}
+    unsigned Node2() const {return second.second;}
+};
+
+class ClusteredFeature: public set<unsigned>
+{
+public:
+    ClusteredFeature(const FeaturePair &fp)
+    {
+        insert(fp.Node1());
+        insert(fp.Node2());
+    }
+    bool bIncludes(unsigned indInput) const {return find(indInput) != end();}
+    void AddLink(const FeaturePair &fp){}
+};
+
+class ClusteredFeatureMerger
+{
+    const ClusterBayes &cb;
+public:
+    ClusteredFeatureMerger(const ClusterBayes &cb_): cb(cb_) {}
+    ClusteredFeature *operator()(const ClusteredFeature &cf, unsigned indNewInput, unsigned indExistingInput, const FeaturePair &fp) const
+    {
+        ClusteredFeature *pcfnew = new ClusteredFeature(cf);
+        pcfnew->insert(indNewInput);
+        if (cb.bClusterFeatureIsOK(*pcfnew))
+            return pcfnew;
+        delete pcfnew;
+        return nullptr;
+    }
+    ClusteredFeature *operator()(const ClusteredFeature &cf1, const ClusteredFeature &cf2, const FeaturePair &fp) const
+    {
+        ClusteredFeature *pcfnew = new ClusteredFeature(cf1);
+        *pcfnew += cf2;
+        if (cb.bClusterFeatureIsOK(*pcfnew))
+            return pcfnew;
+        delete pcfnew;
+        return nullptr;
+    }
+};
+
+int ClusterBayes::Predict(const vector<bool> &vb_Spikes)
+{
+    unsigned j;
+    FORI(nInputs)
+        if (vb_Spikes[_i])
+            ++vn_Neuron[_i];
+    qvb_NeuronInput.push_front(vb_Spikes);
+    if (qvb_NeuronInput.size() > NeuronTimeDepth) {
+        FORI(nInputs)
+            if (qvb_NeuronInput.back()[_i])
+                --vn_Neuron[_i];
+        qvb_NeuronInput.pop_back();
+    }
+    if (ntact && !(ntact % NeuronTimeDepth)) {
+        qvb_RecentNeuronInput.push_front(vector<bool>(nInputs, false));
+        FORI(nInputs)
+            if (vn_Neuron[_i])
+                qvb_RecentNeuronInput.front()[_i] = true;
+        if (ntact > 1000 && qvb_RecentNeuronInput[0] != qvb_RecentNeuronInput[1]) {
+            set<FeaturePair, greater<FeaturePair> > asspairs;
+            FOR_(j, nInputs - 1)
+                if (qvb_RecentNeuronInput.front()[j] && mmd_AssociatedPairs.find(j) != mmd_AssociatedPairs.end())
+                    for (const auto &i: mmd_AssociatedPairs[j])
+                        if (qvb_RecentNeuronInput.front()[i.first])
+                            asspairs.insert(FeaturePair(i.second, j, i.first));
+            list<ClusteredFeature> lcf_;
+            ClusteredFeatureMerger cfm(*this);
+            AgglomerativeClustering(asspairs, lcf_, cfm);
+            vector<map<vector<unsigned>, vector<double> >::iterator> CurrentFeatures;
+            for (const auto &i: lcf_) {
+                auto p_ = mvvd_BayesModel.insert(pair<vector<unsigned>, vector<double> >(vector<unsigned>(i.begin(), i.end()), vector<double>(nGoalLevels + 1, 0.)));
+                CurrentFeatures.push_back(p_.first);
+                if (p_.second)
+                    FORI(nGoalLevels + 1)
+                        p_.first->second[_i] = count_if(vvvb_byLevels[_i].begin(), vvvb_byLevels[_i].end(), [=](const vector<bool> &vb_){return all_of(p_.first->first.begin(), p_.first->first.end(), [&](unsigned ind){return vb_[ind];});}) /
+                                               (double)nLevelMeasurements(_i);
+            }
+            double dpmax = 0;
+            int    PredictedLevel = CurrentLevel;
+            FORI(nGoalLevels + 1) {
+                double dp = vd_BayesPriors[_i];
+                for (auto i: CurrentFeatures) {
+                    dp *= i->second[_i];
+                    if (!dp)
+                        break;
+                }
+                if (dp > dpmax) {
+                    dpmax = dp;
+                    PredictedLevel = _i;
+                }
+            }
+            return PredictedLevel;
+        }
+    }
+    return CurrentLevel;
+}
+
+void ClusterBayes::FixReward()
+{
+    int j;
+    size_t l;
+    ntotMeasurements += qvb_RecentNeuronInput.size();
+    for (j = 0; j < nGoalLevels && qvb_RecentNeuronInput.size(); ++j) {
+        auto i = qvb_RecentNeuronInput.size() > LevelNeuronPeriod ? qvb_RecentNeuronInput.begin() + LevelNeuronPeriod : qvb_RecentNeuronInput.end();
+        vvvb_byLevels[j].insert(vvvb_byLevels[j].end(), qvb_RecentNeuronInput.begin(),  i);
+        auto k = qvb_RecentNeuronInput.begin();
+        while (k != i) {
+            FORI(nInputs)
+                if ((*k)[_i]) {
+                    ++smvn_Pairs(_i, _i)[j];
+                    FOR_(l, _i)
+                        if ((*k)[l])
+                            ++smvn_Pairs(_i, l)[j];
+                }
+            ++k;
+        }
+        qvb_RecentNeuronInput.erase(qvb_RecentNeuronInput.begin(), i);
+    }
+    if (j == nGoalLevels) {
+        for (const auto &m: vvvb_byLevels[j])
+            FORI(nInputs)
+                if (m[_i]) {
+                    ++smvn_Pairs(_i, _i)[j];
+                    FOR_(l, _i)
+                        if (m[l])
+                            ++smvn_Pairs(_i, l)[j];
+                }
+        vvvb_byLevels[j].insert(vvvb_byLevels[j].end(), qvb_RecentNeuronInput.begin(),  qvb_RecentNeuronInput.end());
+    }
+    qvb_RecentNeuronInput.clear();
+    mmd_AssociatedPairs.clear();
+    FORI(nGoalLevels)
+        FOR_(j, nInputs - 1) {
+            auto n = smvn_Pairs(j, j)[_i];
+            for (l = j + 1; l < nInputs; ++l) {
+                auto n1 = smvn_Pairs(l, j)[_i];
+                if (n1 > minnSignificantExtraSpikes / 2) {
+                    double d = n1 - n * (double)smvn_Pairs(l, l)[_i] / nLevelMeasurements(_i);
+                    if (d > minnSignificantExtraSpikes / 2)
+                        mmd_AssociatedPairs[j][l] = d;
+                }
+            }
+        }
+    mvvd_BayesModel.clear();
+    FORI(nGoalLevels + 1)
+        vd_BayesPriors[_i] = nLevelMeasurements(_i) / (double)ntotMeasurements;
+}
+
+deque<vector<bool> > qvb_Neuron, qvb_;
+unique_ptr<ClusterBayes> cb;
 const int prerewardperiod = LevelDuration * nGoalLevels;
 map<vector<int>, vector<int> > mvindvn_;
-int BayesModel[nGoalLevels + 1][nInputs];
 int nRewardedTacts = 0;
 //ofstream ofsrews("rews.csv");
 //ofstream ofsBayes("Bayes.csv");
 double d2cur = 0.;
 
+class AdaptiveSpikeSource
+{
+    int LastTactinThisState;
+    float rCurrentFrequency;
+public:
+    AdaptiveSpikeSource(): LastTactinThisState(-2) {}
+    bool bFire()
+    {
+        if (LastTactinThisState < ntact - 1)
+            rCurrentFrequency = rStartingStateFiringFrequency;
+        bool bret = rng() < rCurrentFrequency;
+        if (bret && rCurrentFrequency > 1.F / NeuronTimeDepth)
+            rCurrentFrequency *= 0.5F;
+        LastTactinThisState = ntact;
+        return bret;
+    }
+};
+
 class DYNAMIC_LIBRARY_EXPORTED_CLASS rec_ping_pong: public IReceptors
 {
-	vector<float> vr_VelocityZoneBoundary;
+    vector<float>               vr_VelocityZoneBoundary;
+    vector<AdaptiveSpikeSource> vass_;
 protected:
 	virtual bool bGenerateReceptorSignals(char *prec, size_t neuronstrsize) override
 	{
@@ -215,11 +466,11 @@ protected:
 		if (indRacket == nSpatialZones)
 			indRacket = nSpatialZones - 1;
 		vector<bool> vb_Spikes(nInputs, false);
-		vb_Spikes[indxBall] = SIGNAL_ON;
-		vb_Spikes[nSpatialZones + indyBall] = SIGNAL_ON;
-		vb_Spikes[nSpatialZones * 2 + indvxBall] = SIGNAL_ON;
-		vb_Spikes[nSpatialZones * 2 + nVelocityZones + indvyBall] = SIGNAL_ON;
-		vb_Spikes[nSpatialZones * 2 + nVelocityZones * 2 + indRacket] = SIGNAL_ON;
+        vb_Spikes[indxBall] = vass_[indxBall].bFire();
+        vb_Spikes[nSpatialZones + indyBall] = vass_[nSpatialZones + indyBall].bFire();
+        vb_Spikes[nSpatialZones * 2 + indvxBall] = vass_[nSpatialZones * 2 + indvxBall].bFire();
+        vb_Spikes[nSpatialZones * 2 + nVelocityZones + indvyBall] = vass_[nSpatialZones * 2 + nVelocityZones + indvyBall].bFire();
+        vb_Spikes[nSpatialZones * 2 + nVelocityZones * 2 + indRacket] = vass_[nSpatialZones * 2 + nVelocityZones * 2 + indRacket].bFire();
 		int indxRel = (int)((vr_PhaseSpacePoint[0] + 0.5) / rRelPosStep);
 		if (indxRel < nRelPos) {
 			int indyRel = (int)((vr_PhaseSpacePoint[4] - vr_PhaseSpacePoint[1] + rRelPosStep / 2) / rRelPosStep);   // Raster goes from top (higher y) to bottom - in opposite 
@@ -227,7 +478,7 @@ protected:
 			if (abs(indyRel) <= (nRelPos - 1) / 2) {
 				indyRel += (nRelPos - 1) / 2;
 				indRaster = indyRel * nRelPos + indxRel;
-				vb_Spikes[nSpatialZones * 3 + nVelocityZones * 2 + indRaster] = SIGNAL_ON;
+                vb_Spikes[nSpatialZones * 3 + nVelocityZones * 2 + indRaster] = vass_[nSpatialZones * 3 + nVelocityZones * 2 + indRaster].bFire();;
 			}
 		}
 		for (auto i: vb_Spikes) {
@@ -235,12 +486,11 @@ protected:
 			prec += neuronstrsize;
 		}
 
-		double d2 = (-0.5 - vr_PhaseSpacePoint[0]) * (-0.5 - vr_PhaseSpacePoint[0]) + (vr_PhaseSpacePoint[1] - vr_PhaseSpacePoint[4]) * (vr_PhaseSpacePoint[1] - vr_PhaseSpacePoint[4]);
-		CurrentLevel = lower_bound(adLevelBoundaries, adLevelBoundaries + nGoalLevels, d2) - adLevelBoundaries;
+        CurrentLevel = cb->Predict(vb_Spikes);
 
 		return true;
 	}
-	virtual void GetMeanings(VECTOR<STRING> &vstr_Meanings) const 
+    virtual void GetMeanings(VECTOR<STRING> &vstr_Meanings) const override
 	{
 		vstr_Meanings.resize(nInputs);
 		int i = 0;
@@ -278,7 +528,7 @@ protected:
 			}
 	}
 public:
-	rec_ping_pong(): IReceptors(nInputs), vr_VelocityZoneBoundary((nVelocityZones - 1) / 2)
+    rec_ping_pong(): IReceptors(nInputs), vr_VelocityZoneBoundary((nVelocityZones - 1) / 2), vass_(nInputs)
 	{
 		vector<float> vr_samples(9000);
 		for (auto &i: vr_samples) {
@@ -289,8 +539,7 @@ public:
 		sort(vr_samples.begin(), vr_samples.end());
 		FORI((nVelocityZones - 1) / 2)
 			vr_VelocityZoneBoundary[_i] = vr_samples[vr_samples.size() / 9 + _i * 2 * vr_samples.size() / 9];
-
-		memset(BayesModel, 0, sizeof(BayesModel));
+        cb.reset(new ClusterBayes);
 
 	}
 	virtual void Randomize(void) override {rng.Randomize();}
@@ -345,7 +594,7 @@ private:
 	int                  curlev = nGoalLevels;
 
 protected:
-	virtual void GetMeanings(VECTOR<STRING> &vstr_Meanings) const
+    virtual void GetMeanings(VECTOR<STRING> &vstr_Meanings) const override
 	{
 		vstr_Meanings.resize(1);
 		vstr_Meanings.front() = typ == reward ? "REW" : typ == punishment ? "PUN" : typ == _debug_rewnorm ? "$$$rewnorm" : "$$$punishment";
@@ -369,6 +618,7 @@ public:
 								if (ntact >= tactStart)
 									++nRewardsTot;
 								++nRewards;
+                                cb->FixReward();
 								b_forVerifier_Reward = true;
 							 }
 							 break;
@@ -405,7 +655,7 @@ public:
 	}
 };
 
-const float rBasicPoissonFrequency = 0.0001F;   // Надо, чтобы за период допаминовой пластичности было примерно 1-2 случайных действия - не больше.
+const float rBasicPoissonFrequency = 0.0001F;   // РќР°РґРѕ, С‡С‚РѕР±С‹ Р·Р° РїРµСЂРёРѕРґ РґРѕРїР°РјРёРЅРѕРІРѕР№ РїР»Р°СЃС‚РёС‡РЅРѕСЃС‚Рё Р±С‹Р»Рѕ РїСЂРёРјРµСЂРЅРѕ 1-2 СЃР»СѓС‡Р°Р№РЅС‹С… РґРµР№СЃС‚РІРёСЏ - РЅРµ Р±РѕР»СЊС€Рµ.
 const float rMinTargetNetworkActivity = 0.01F;
 const int NoisePeriod = 300000;
 
