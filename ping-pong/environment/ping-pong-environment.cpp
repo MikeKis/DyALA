@@ -49,10 +49,12 @@ const int nRelPos = 5;
 const float rRelPosStep = RACKET_SIZE / 3;   // Racket takes 3 middle positions of the nRelPos x nRelPos grid.
 const unsigned nInputs = 3 * nSpatialZones + 2 * nVelocityZones + nRelPos * nRelPos;
 
+const unsigned aAlternativeInputBoundaries[] = {30, 60, 69, 78, 108};
+
 const float rAction = 1.F / nSpatialZones;
 
-const float rStartingStateFiringFrequency = 0.3F;
 const int NeuronTimeDepth = 10;
+const float rStateFiringFrequency = 3.F / NeuronTimeDepth;
 
 class RandomNumberGenerator
 {
@@ -183,7 +185,9 @@ class ClusterBayes
 public:
     ClusterBayes(): vvvb_byLevels(nGoalLevels + 1), vn_Neuron(nInputs, 0), smvn_Pairs(nInputs), vd_BayesPriors(nGoalLevels + 1, 0.)
     {
-        fill(smvn_Pairs.begin1(), smvn_Pairs.end1(), vector<unsigned>(nGoalLevels + 1, 0));
+		FORI(nInputs)
+			for (int i = _i; i < nInputs; ++i)
+				smvn_Pairs(i, _i).resize(nGoalLevels + 1, 0);
     }
     int Predict(const vector<bool> &vb_Spikes);
     void FixReward();
@@ -312,13 +316,14 @@ int ClusterBayes::Predict(const vector<bool> &vb_Spikes)
         FORI(nInputs)
             if (vn_Neuron[_i])
                 qvb_RecentNeuronInput.front()[_i] = true;
-        if (ntact > 1000 && qvb_RecentNeuronInput[0] != qvb_RecentNeuronInput[1]) {
+        if (nLevelMeasurements(0) && (qvb_RecentNeuronInput.size() < 2 || qvb_RecentNeuronInput[0] != qvb_RecentNeuronInput[1])) {
             set<FeaturePair, greater<FeaturePair> > asspairs;
+			auto vb_SingleFeatures = qvb_RecentNeuronInput.front();
             FOR_(j, nInputs - 1)
                 if (qvb_RecentNeuronInput.front()[j] && mmd_AssociatedPairs.find(j) != mmd_AssociatedPairs.end())
                     for (const auto &i: mmd_AssociatedPairs[j])
-                        if (qvb_RecentNeuronInput.front()[i.first])
-                            asspairs.insert(FeaturePair(i.second, j, i.first));
+						if (qvb_RecentNeuronInput.front()[i.first]) 
+							asspairs.insert(FeaturePair(i.second, j, i.first));
             list<ClusteredFeature> lcf_;
             ClusteredFeatureMerger cfm(*this);
             AgglomerativeClustering(asspairs, lcf_, cfm);
@@ -330,9 +335,19 @@ int ClusterBayes::Predict(const vector<bool> &vb_Spikes)
                     FORI(nGoalLevels + 1)
                         p_.first->second[_i] = count_if(vvvb_byLevels[_i].begin(), vvvb_byLevels[_i].end(), [=](const vector<bool> &vb_){return all_of(p_.first->first.begin(), p_.first->first.end(), [&](unsigned ind){return vb_[ind];});}) /
                                                (double)nLevelMeasurements(_i);
+				for (auto k: i)
+					vb_SingleFeatures[k] = false;
             }
+			FOR_(j, nInputs)
+				if (vb_SingleFeatures[j]) {
+					auto p_ = mvvd_BayesModel.insert(pair<vector<unsigned>, vector<double> >(vector<unsigned>(1, j), vector<double>(nGoalLevels + 1, 0.)));
+					CurrentFeatures.push_back(p_.first);
+					if (p_.second)
+						FORI(nGoalLevels + 1)
+							p_.first->second[_i] = count_if(vvvb_byLevels[_i].begin(), vvvb_byLevels[_i].end(), [=](const vector<bool> &vb_) {return vb_[p_.first->first.front()];}) / (double)nLevelMeasurements(_i);
+				}
             double dpmax = 0;
-            int    PredictedLevel = CurrentLevel;
+            int PredictedLevel = CurrentLevel;
             FORI(nGoalLevels + 1) {
                 double dp = vd_BayesPriors[_i];
                 for (auto i: CurrentFeatures) {
@@ -353,7 +368,7 @@ int ClusterBayes::Predict(const vector<bool> &vb_Spikes)
 
 void ClusterBayes::FixReward()
 {
-    int j;
+    unsigned j;
     size_t l;
     ntotMeasurements += qvb_RecentNeuronInput.size();
     for (j = 0; j < nGoalLevels && qvb_RecentNeuronInput.size(); ++j) {
@@ -385,18 +400,21 @@ void ClusterBayes::FixReward()
     }
     qvb_RecentNeuronInput.clear();
     mmd_AssociatedPairs.clear();
-    FORI(nGoalLevels)
-        FOR_(j, nInputs - 1) {
-            auto n = smvn_Pairs(j, j)[_i];
-            for (l = j + 1; l < nInputs; ++l) {
-                auto n1 = smvn_Pairs(l, j)[_i];
-                if (n1 > minnSignificantExtraSpikes / 2) {
-                    double d = n1 - n * (double)smvn_Pairs(l, l)[_i] / nLevelMeasurements(_i);
-                    if (d > minnSignificantExtraSpikes / 2)
-                        mmd_AssociatedPairs[j][l] = d;
-                }
-            }
-        }
+	FORI(nGoalLevels) {
+		j = 0;
+		for (auto o: aAlternativeInputBoundaries) 
+			for (; j < o; ++j) {
+				auto n = smvn_Pairs(j, j)[_i];
+				for (l = o; l < nInputs; ++l) {
+					auto n1 = smvn_Pairs(l, j)[_i];
+					if (n1 > minnSignificantExtraSpikes / 2) {
+						double d = n1 - n * (double)smvn_Pairs(l, l)[_i] / nLevelMeasurements(_i);
+						if (d > minnSignificantExtraSpikes / 2)
+							mmd_AssociatedPairs[j][(unsigned)l] = d;
+					}
+				}
+			}
+	}
     mvvd_BayesModel.clear();
     FORI(nGoalLevels + 1)
         vd_BayesPriors[_i] = nLevelMeasurements(_i) / (double)ntotMeasurements;
@@ -420,10 +438,10 @@ public:
     bool bFire()
     {
         if (LastTactinThisState < ntact - 1)
-            rCurrentFrequency = rStartingStateFiringFrequency;
+            rCurrentFrequency = rStateFiringFrequency;
         bool bret = rng() < rCurrentFrequency;
-        if (bret && rCurrentFrequency > 1.F / NeuronTimeDepth)
-            rCurrentFrequency *= 0.5F;
+//        if (bret && rCurrentFrequency > 3.F / NeuronTimeDepth)
+//            rCurrentFrequency *= 0.5F;
         LastTactinThisState = ntact;
         return bret;
     }
@@ -436,7 +454,7 @@ class DYNAMIC_LIBRARY_EXPORTED_CLASS rec_ping_pong: public IReceptors
 protected:
 	virtual bool bGenerateReceptorSignals(char *prec, size_t neuronstrsize) override
 	{
-//		static ofstream ofsState("ping_pong_state.csv");
+		static ofstream ofsState("ping_pong_state.csv");
 		vector<float> vr_PhaseSpacePoint(5);
 
 		vector<int> vind_(6);
@@ -487,6 +505,13 @@ protected:
 		}
 
         CurrentLevel = cb->Predict(vb_Spikes);
+
+		if (ntact && !(ntact % NeuronTimeDepth)) {
+			ofsState << CurrentLevel;
+			for (auto z: vr_PhaseSpacePoint)
+				ofsState << ',' << z;
+			ofsState << endl;
+		}
 
 		return true;
 	}
