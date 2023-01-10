@@ -54,7 +54,7 @@ const unsigned aAlternativeInputBoundaries[] = {30, 60, 69, 78, 108};
 const float rAction = 1.F / nSpatialZones;
 
 const int NeuronTimeDepth = 10;
-const float rStateFiringFrequency = 3.F / NeuronTimeDepth;
+const float rStateFiringFrequency = 5.F / NeuronTimeDepth;
 
 class RandomNumberGenerator
 {
@@ -164,11 +164,12 @@ void UpdateWorld(vector<float> &vr_PhaseSpacePoint)
 }
 
 int ntact = 0;
-const int nGoalLevels = 4;
-const int LevelDuration = 100;
+int nGoalLevels;
+const int LevelDuration = 50;
 const int LevelNeuronPeriod = LevelDuration / NeuronTimeDepth;
 const int minnSignificantExtraSpikes = 10;
-int CurrentLevel = nGoalLevels;
+int CurrentLevel;
+int tactLevelFixed = -1000; // = never
 
 class ClusterBayes
 {
@@ -189,11 +190,20 @@ public:
 			for (int i = _i; i < nInputs; ++i)
 				smvn_Pairs(i, _i).resize(nGoalLevels + 1, 0);
     }
-    int Predict(const vector<bool> &vb_Spikes);
-    void FixReward();
+    void AddNewInput(const vector<bool> &vb_Spikes);
+	int Predict();
+	void FixReward();
     bool bClusterFeatureIsOK(const set<unsigned> &s_) const
     {
         int j;
+		set<unsigned>::const_iterator i;
+		const unsigned *p1 = NULL;
+		FOR_ALL(i, s_) {
+			auto p = upper_bound(aAlternativeInputBoundaries, aAlternativeInputBoundaries + sizeof(aAlternativeInputBoundaries) / sizeof(aAlternativeInputBoundaries[0]), *i);
+			if (p == p1)
+				return false;
+			p1 = p;
+		}
         FOR_(j, nGoalLevels) {
             auto n = count_if(vvvb_byLevels[j].begin(), vvvb_byLevels[j].end(), [&](const vector<bool> &vb_){return all_of(s_.begin(), s_.end(), [&](unsigned ind){return vb_[ind];});});
             if (n >= 4) {
@@ -298,70 +308,99 @@ public:
     }
 };
 
-int ClusterBayes::Predict(const vector<bool> &vb_Spikes)
+void ClusterBayes::AddNewInput(const vector<bool> &vb_Spikes)
+{
+	FORI(nInputs)
+		if (vb_Spikes[_i])
+			++vn_Neuron[_i];
+	qvb_NeuronInput.push_front(vb_Spikes);
+	if (qvb_NeuronInput.size() > NeuronTimeDepth) {
+		FORI(nInputs)
+			if (qvb_NeuronInput.back()[_i])
+				--vn_Neuron[_i];
+		qvb_NeuronInput.pop_back();
+	}
+	if (ntact && !(ntact % NeuronTimeDepth)) {
+		qvb_RecentNeuronInput.push_front(vector<bool>(nInputs, false));
+		FORI(nInputs)
+			if (vn_Neuron[_i])
+				qvb_RecentNeuronInput.front()[_i] = true;
+	}
+}
+
+static ofstream ofsState("ping_pong_state.csv");
+vector<float> vr_CurrentPhaseSpacePoint(5);
+
+int ClusterBayes::Predict()
 {
     unsigned j;
-    FORI(nInputs)
-        if (vb_Spikes[_i])
-            ++vn_Neuron[_i];
-    qvb_NeuronInput.push_front(vb_Spikes);
-    if (qvb_NeuronInput.size() > NeuronTimeDepth) {
-        FORI(nInputs)
-            if (qvb_NeuronInput.back()[_i])
-                --vn_Neuron[_i];
-        qvb_NeuronInput.pop_back();
-    }
-    if (ntact && !(ntact % NeuronTimeDepth)) {
-        qvb_RecentNeuronInput.push_front(vector<bool>(nInputs, false));
-        FORI(nInputs)
-            if (vn_Neuron[_i])
-                qvb_RecentNeuronInput.front()[_i] = true;
-        if (nLevelMeasurements(0) && (qvb_RecentNeuronInput.size() < 2 || qvb_RecentNeuronInput[0] != qvb_RecentNeuronInput[1])) {
-            set<FeaturePair, greater<FeaturePair> > asspairs;
-			auto vb_SingleFeatures = qvb_RecentNeuronInput.front();
-            FOR_(j, nInputs - 1)
-                if (qvb_RecentNeuronInput.front()[j] && mmd_AssociatedPairs.find(j) != mmd_AssociatedPairs.end())
-                    for (const auto &i: mmd_AssociatedPairs[j])
-						if (qvb_RecentNeuronInput.front()[i.first]) 
-							asspairs.insert(FeaturePair(i.second, j, i.first));
-            list<ClusteredFeature> lcf_;
-            ClusteredFeatureMerger cfm(*this);
-            AgglomerativeClustering(asspairs, lcf_, cfm);
-            vector<map<vector<unsigned>, vector<double> >::iterator> CurrentFeatures;
-            for (const auto &i: lcf_) {
-                auto p_ = mvvd_BayesModel.insert(pair<vector<unsigned>, vector<double> >(vector<unsigned>(i.begin(), i.end()), vector<double>(nGoalLevels + 1, 0.)));
-                CurrentFeatures.push_back(p_.first);
-                if (p_.second)
-                    FORI(nGoalLevels + 1)
-                        p_.first->second[_i] = count_if(vvvb_byLevels[_i].begin(), vvvb_byLevels[_i].end(), [=](const vector<bool> &vb_){return all_of(p_.first->first.begin(), p_.first->first.end(), [&](unsigned ind){return vb_[ind];});}) /
-                                               (double)nLevelMeasurements(_i);
-				for (auto k: i)
-					vb_SingleFeatures[k] = false;
-            }
-			FOR_(j, nInputs)
-				if (vb_SingleFeatures[j]) {
-					auto p_ = mvvd_BayesModel.insert(pair<vector<unsigned>, vector<double> >(vector<unsigned>(1, j), vector<double>(nGoalLevels + 1, 0.)));
-					CurrentFeatures.push_back(p_.first);
-					if (p_.second)
-						FORI(nGoalLevels + 1)
-							p_.first->second[_i] = count_if(vvvb_byLevels[_i].begin(), vvvb_byLevels[_i].end(), [=](const vector<bool> &vb_) {return vb_[p_.first->first.front()];}) / (double)nLevelMeasurements(_i);
+    if (nLevelMeasurements(0)) {
+        set<FeaturePair, greater<FeaturePair> > asspairs;
+		vector<bool> vb_SingleFeatures(nInputs, false);
+		for (size_t k = 0; k <= sizeof(aAlternativeInputBoundaries) / sizeof(aAlternativeInputBoundaries[0]); ++k) {
+			pair<int, int> p_(!k ? 0 : aAlternativeInputBoundaries[k - 1], k < sizeof(aAlternativeInputBoundaries) / sizeof(aAlternativeInputBoundaries[0]) ? aAlternativeInputBoundaries[k] : nInputs);
+			int nmax = -1;
+			int indmax;
+			int ind = p_.first + ntact % (p_.second - p_.first);
+			FORI(p_.second - p_.first) {
+				if (vn_Neuron[ind] > nmax) {
+					nmax = vn_Neuron[ind];
+					indmax = ind;
 				}
-            double dpmax = 0;
-            int PredictedLevel = CurrentLevel;
-            FORI(nGoalLevels + 1) {
-                double dp = vd_BayesPriors[_i];
-                for (auto i: CurrentFeatures) {
-                    dp *= i->second[_i];
-                    if (!dp)
-                        break;
-                }
-                if (dp > dpmax) {
-                    dpmax = dp;
-                    PredictedLevel = _i;
-                }
-            }
-            return PredictedLevel;
+				if (++ind == p_.second)
+					ind = p_.first;
+			}
+			if (nmax)
+				vb_SingleFeatures[indmax] = true;
+		}
+		FOR_(j, nInputs - 1)
+            if (vb_SingleFeatures[j] && mmd_AssociatedPairs.find(j) != mmd_AssociatedPairs.end())
+                for (const auto &i: mmd_AssociatedPairs[j])
+					if (vb_SingleFeatures[i.first])
+						asspairs.insert(FeaturePair(i.second, j, i.first));
+        list<ClusteredFeature> lcf_;
+        ClusteredFeatureMerger cfm(*this);
+        AgglomerativeClustering(asspairs, lcf_, cfm);
+        vector<map<vector<unsigned>, vector<double> >::iterator> CurrentFeatures;
+        for (const auto &i: lcf_) {
+            auto p_ = mvvd_BayesModel.insert(pair<vector<unsigned>, vector<double> >(vector<unsigned>(i.begin(), i.end()), vector<double>(nGoalLevels + 1, 0.)));
+            CurrentFeatures.push_back(p_.first);
+            if (p_.second)
+                FORI(nGoalLevels + 1)
+                    p_.first->second[_i] = count_if(vvvb_byLevels[_i].begin(), vvvb_byLevels[_i].end(), [=](const vector<bool> &vb_){return all_of(p_.first->first.begin(), p_.first->first.end(), [&](unsigned ind){return vb_[ind];});}) /
+                                           (double)nLevelMeasurements(_i);
+			for (auto k: i)
+				vb_SingleFeatures[k] = false;
         }
+		FOR_(j, nInputs)
+			if (vb_SingleFeatures[j]) {
+				auto p_ = mvvd_BayesModel.insert(pair<vector<unsigned>, vector<double> >(vector<unsigned>(1, j), vector<double>(nGoalLevels + 1, 0.)));
+				CurrentFeatures.push_back(p_.first);
+				if (p_.second)
+					FORI(nGoalLevels + 1)
+						p_.first->second[_i] = count_if(vvvb_byLevels[_i].begin(), vvvb_byLevels[_i].end(), [=](const vector<bool> &vb_) {return vb_[p_.first->first.front()];}) / (double)nLevelMeasurements(_i);
+			}
+        double dpmax = 0;
+        int PredictedLevel = CurrentLevel;
+        FORI(nGoalLevels + 1) {
+            double dp = vd_BayesPriors[_i];
+            for (auto i: CurrentFeatures) {
+                dp *= i->second[_i];
+                if (!dp)
+                    break;
+            }
+            if (dp > dpmax) {
+                dpmax = dp;
+                PredictedLevel = _i;
+            }
+        }
+
+		ofsState << ntact << ',' << PredictedLevel;
+		for (auto z: vr_CurrentPhaseSpacePoint)
+			ofsState << ',' << z;
+		ofsState << endl;
+
+		return PredictedLevel;
     }
     return CurrentLevel;
 }
@@ -422,7 +461,6 @@ void ClusterBayes::FixReward()
 
 deque<vector<bool> > qvb_Neuron, qvb_;
 unique_ptr<ClusterBayes> cb;
-const int prerewardperiod = LevelDuration * nGoalLevels;
 map<vector<int>, vector<int> > mvindvn_;
 int nRewardedTacts = 0;
 //ofstream ofsrews("rews.csv");
@@ -454,9 +492,6 @@ class DYNAMIC_LIBRARY_EXPORTED_CLASS rec_ping_pong: public IReceptors
 protected:
 	virtual bool bGenerateReceptorSignals(char *prec, size_t neuronstrsize) override
 	{
-		static ofstream ofsState("ping_pong_state.csv");
-		vector<float> vr_PhaseSpacePoint(5);
-
 		vector<int> vind_(6);
 #define indxBall vind_[0]
 #define indyBall vind_[1]
@@ -465,22 +500,22 @@ protected:
 #define indRacket vind_[4]
 #define indRaster vind_[5]
 
-		UpdateWorld(vr_PhaseSpacePoint);
+		UpdateWorld(vr_CurrentPhaseSpacePoint);
 		/*
 		for (auto z: vr_PhaseSpacePoint)
 			ofsState << z << ',';
 		ofsState << endl; */
-		indxBall = (int)((vr_PhaseSpacePoint[0] + 0.5) / (1. / nSpatialZones));
+		indxBall = (int)((vr_CurrentPhaseSpacePoint[0] + 0.5) / (1. / nSpatialZones));
 		if (indxBall == nSpatialZones)
 			indxBall = nSpatialZones - 1;
-		indyBall = (int)((vr_PhaseSpacePoint[1] + 0.5) / (1. / nSpatialZones));
+		indyBall = (int)((vr_CurrentPhaseSpacePoint[1] + 0.5) / (1. / nSpatialZones));
 		if (indyBall == nSpatialZones)
 			indyBall = nSpatialZones - 1;
-		indvxBall = (int)(lower_bound(vr_VelocityZoneBoundary.begin(), vr_VelocityZoneBoundary.end(), abs(vr_PhaseSpacePoint[2])) - vr_VelocityZoneBoundary.begin());
-		indvxBall = vr_PhaseSpacePoint[2] < 0 ? nVelocityZones / 2 - indvxBall : nVelocityZones / 2 + indvxBall;
-		indvyBall = (int)(lower_bound(vr_VelocityZoneBoundary.begin(), vr_VelocityZoneBoundary.end(), abs(vr_PhaseSpacePoint[3])) - vr_VelocityZoneBoundary.begin());
-		indvyBall = vr_PhaseSpacePoint[3] < 0 ? nVelocityZones / 2 - indvyBall : nVelocityZones / 2 + indvyBall;
-		indRacket = (int)((vr_PhaseSpacePoint[4] + 0.5) / (1. / nSpatialZones));
+		indvxBall = (int)(lower_bound(vr_VelocityZoneBoundary.begin(), vr_VelocityZoneBoundary.end(), abs(vr_CurrentPhaseSpacePoint[2])) - vr_VelocityZoneBoundary.begin());
+		indvxBall = vr_CurrentPhaseSpacePoint[2] < 0 ? nVelocityZones / 2 - indvxBall : nVelocityZones / 2 + indvxBall;
+		indvyBall = (int)(lower_bound(vr_VelocityZoneBoundary.begin(), vr_VelocityZoneBoundary.end(), abs(vr_CurrentPhaseSpacePoint[3])) - vr_VelocityZoneBoundary.begin());
+		indvyBall = vr_CurrentPhaseSpacePoint[3] < 0 ? nVelocityZones / 2 - indvyBall : nVelocityZones / 2 + indvyBall;
+		indRacket = (int)((vr_CurrentPhaseSpacePoint[4] + 0.5) / (1. / nSpatialZones));
 		if (indRacket == nSpatialZones)
 			indRacket = nSpatialZones - 1;
 		vector<bool> vb_Spikes(nInputs, false);
@@ -489,9 +524,9 @@ protected:
         vb_Spikes[nSpatialZones * 2 + indvxBall] = vass_[nSpatialZones * 2 + indvxBall].bFire();
         vb_Spikes[nSpatialZones * 2 + nVelocityZones + indvyBall] = vass_[nSpatialZones * 2 + nVelocityZones + indvyBall].bFire();
         vb_Spikes[nSpatialZones * 2 + nVelocityZones * 2 + indRacket] = vass_[nSpatialZones * 2 + nVelocityZones * 2 + indRacket].bFire();
-		int indxRel = (int)((vr_PhaseSpacePoint[0] + 0.5) / rRelPosStep);
+		int indxRel = (int)((vr_CurrentPhaseSpacePoint[0] + 0.5) / rRelPosStep);
 		if (indxRel < nRelPos) {
-			int indyRel = (int)((vr_PhaseSpacePoint[4] - vr_PhaseSpacePoint[1] + rRelPosStep / 2) / rRelPosStep);   // Raster goes from top (higher y) to bottom - in opposite 
+			int indyRel = (int)((vr_CurrentPhaseSpacePoint[4] - vr_CurrentPhaseSpacePoint[1] + rRelPosStep / 2) / rRelPosStep);   // Raster goes from top (higher y) to bottom - in opposite 
 																 // direction to y axis
 			if (abs(indyRel) <= (nRelPos - 1) / 2) {
 				indyRel += (nRelPos - 1) / 2;
@@ -504,14 +539,7 @@ protected:
 			prec += neuronstrsize;
 		}
 
-        CurrentLevel = cb->Predict(vb_Spikes);
-
-		if (ntact && !(ntact % NeuronTimeDepth)) {
-			ofsState << CurrentLevel;
-			for (auto z: vr_PhaseSpacePoint)
-				ofsState << ',' << z;
-			ofsState << endl;
-		}
+        cb->AddNewInput(vb_Spikes);
 
 		return true;
 	}
@@ -595,7 +623,7 @@ int nPunishments = 0;
 int nRewardsTot = 0;
 int nPunishmentsTot = 0;
 
-const int RewardTrainLength = 10;
+const int RewardTrainLength = 1 /*10*/;
 const int RewardTrainPeriod = 2;
 
 bool b_forVerifier_Reward = false;
@@ -613,24 +641,31 @@ public:
 	};
 private:
 	enum Evaluator::type typ;
-	int                  TrainCounter;
+	int                  TrainCounter = 0;
 	int                  PeriodCounter;
-
-	int                  curlev = nGoalLevels;
 
 protected:
     virtual void GetMeanings(VECTOR<STRING> &vstr_Meanings) const override
 	{
-		vstr_Meanings.resize(1);
-		vstr_Meanings.front() = typ == reward ? "REW" : typ == punishment ? "PUN" : typ == _debug_rewnorm ? "$$$rewnorm" : "$$$punishment";
+		if (typ == reward || typ == punishment) {
+			vstr_Meanings.resize(1);
+			vstr_Meanings.front() = typ == reward ? "REW" : "PUN";
+		} else {
+			vstr_Meanings.resize(nGoalLevels);
+			FORI(nGoalLevels) {
+				stringstream ss;
+				ss << (typ == _debug_rewnorm ? "$$$rewnorm" : "$$$punishment") << _i;
+				vstr_Meanings[_i] = ss.str();
+			}
+		}
 	}
 public:
-	Evaluator(enum Evaluator::type t, size_t tactbeg = 0) : IReceptors(1), typ(t) {}
+	Evaluator(enum Evaluator::type t, size_t tactbeg = 0) : IReceptors(t == reward || t == punishment ? 1 : nGoalLevels), typ(t) {}
 	virtual bool bGenerateReceptorSignals(char *prec, size_t neuronstrsize) override
 	{
 		switch (typ) {
 			case punishment: if (es.pprr_Ball->first < -0.5F) {
-								TrainCounter = RewardTrainLength;
+//								TrainCounter = RewardTrainLength;  no primary punishment
 								PeriodCounter = 1;
 								if (ntact >= tactStart)
 									++nPunishmentsTot;
@@ -647,16 +682,22 @@ public:
 								b_forVerifier_Reward = true;
 							 }
 							 break;
-			case _debug_rewnorm: *prec = CurrentLevel < curlev ? 1 : 0;
-						     curlev = CurrentLevel;
-//							 if (*prec)
-//								 ofsrews << ntact << ',1,' << CurrentLevel << endl;
-				             return true;
-			default: *prec = CurrentLevel > curlev ? 1 : 0;
-				curlev = CurrentLevel;
-//				if (*prec)
-//					ofsrews << ntact << ',0,' << CurrentLevel << endl;
-				return true;
+			case _debug_rewnorm: FORI(nGoalLevels) 
+									prec[_i * neuronstrsize] = 0;
+								 if (ntact == tactLevelFixed + NeuronTimeDepth) {
+									int NewLevel = cb->Predict();
+									if (NewLevel < CurrentLevel) {
+										prec[neuronstrsize * NewLevel] = 1;
+										CurrentLevel = -1;   // It means no punishment
+									} else if (NewLevel == CurrentLevel)
+										CurrentLevel = -1;
+								 }
+				                 return true;
+			default: FORI(nGoalLevels) 
+						prec[_i * neuronstrsize] = 0;
+					 if (ntact == tactLevelFixed + NeuronTimeDepth && CurrentLevel >= 0)
+						 prec[neuronstrsize * CurrentLevel] = 1;
+					 return true;
 		}
 		*prec = 0;
 		if (TrainCounter && !--PeriodCounter) {
@@ -736,17 +777,17 @@ PING_PONG_ENVIRONMENT_EXPORT IReceptors *SetParametersIn(int &nReceptors, const 
 {
 	static int CallNo = 0;
 	switch (CallNo++) {
-		case 0: nReceptors = nInputs;
-				return new rec_ping_pong;
-		case 1: nReceptors = 1;
+		case 0: nReceptors = 1;
 			    return new Evaluator(Evaluator::punishment);
-		case 2: nReceptors = 1;
+		case 1: nReceptors = 1;
 			    return new Evaluator(Evaluator::reward);
 
-		case 3: nReceptors = 1;
+		case 2: nGoalLevels = nReceptors;
 				return new Evaluator(Evaluator::_debug_rewnorm);
-		case 4: nReceptors = 1;
+		case 3: nReceptors = nGoalLevels;
 			    return new Evaluator(Evaluator::_debug_punishment);
+		case 4: nReceptors = nInputs;
+			    return new rec_ping_pong;
 
 		default: cout << "Too many calls of SetParametersIn\n";
 				exit(-1);
@@ -787,7 +828,12 @@ PING_PONG_ENVIRONMENT_EXPORT void SetParametersOut(int ExperimentId, size_t tact
 PING_PONG_ENVIRONMENT_EXPORT bool ObtainOutputSpikes(const vector<int> &v_Firing, int nEquilibriumPeriods)
 {
 	int nCommandsDown = count_if(v_Firing.begin(), v_Firing.end(), bind2nd(less<int>(), nNeuronsperAction));
-	*es.prRacket += rAction * ((int)v_Firing.size() - 2 * nCommandsDown);
+	auto r = rAction * ((int)v_Firing.size() - 2 * nCommandsDown);
+	if (r) {
+		CurrentLevel = cb->Predict();
+		tactLevelFixed = ntact;
+	}
+	*es.prRacket += r;
 	if (*es.prRacket > 0.5F - RACKET_SIZE / 2)
 		*es.prRacket = 0.5F - RACKET_SIZE / 2;
 	else if (*es.prRacket < -0.5F + RACKET_SIZE / 2)
