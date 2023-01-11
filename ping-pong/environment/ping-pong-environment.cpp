@@ -40,6 +40,9 @@ using namespace boost::numeric;
 
 DECLARE_UNION_OPERATORS(set<unsigned>)
 
+//----------------------------------------------------------------------------------------------------------
+// World model constants
+
 const unsigned minSpotPassageTime_ms = 300;
 const unsigned maxSpotPassageTime_ms = 1000;
 
@@ -52,9 +55,12 @@ const unsigned nInputs = 3 * nSpatialZones + 2 * nVelocityZones + nRelPos * nRel
 const unsigned aAlternativeInputBoundaries[] = {30, 60, 69, 78, 108};
 
 const float rAction = 1.F / nSpatialZones;
+//----------------------------------------------------------------------------------------------------------
 
-const int NeuronTimeDepth = 10;
-const float rStateFiringFrequency = 5.F / NeuronTimeDepth;
+int NeuronTimeDepth = 10;    // P#1
+float rStateFiringFrequency /* = 5.F / NeuronTimeDepth */;
+int LevelNeuronPeriod /* = LevelDuration / NeuronTimeDepth */;
+int minnSignificantExtraSpikes = 10;
 
 class RandomNumberGenerator
 {
@@ -165,9 +171,6 @@ void UpdateWorld(vector<float> &vr_PhaseSpacePoint)
 
 int ntact = 0;
 int nGoalLevels;
-const int LevelDuration = 50;
-const int LevelNeuronPeriod = LevelDuration / NeuronTimeDepth;
-const int minnSignificantExtraSpikes = 10;
 int CurrentLevel;
 int tactLevelFixed = -1000; // = never
 
@@ -258,9 +261,8 @@ template<class LINKS, class CLUSTER, class MERGER> void AgglomerativeClustering(
     }
 }
 
-class FeaturePair: public pair<double, pair<unsigned, unsigned> >
+struct FeaturePair: public pair<double, pair<unsigned, unsigned> >
 {
-public:
     FeaturePair(double dsig, unsigned ind1, unsigned ind2)
     {
         first = dsig;
@@ -271,9 +273,8 @@ public:
     unsigned Node2() const {return second.second;}
 };
 
-class ClusteredFeature: public set<unsigned>
+struct ClusteredFeature: public set<unsigned>
 {
-public:
     ClusteredFeature(const FeaturePair &fp)
     {
         insert(fp.Node1());
@@ -328,7 +329,7 @@ void ClusterBayes::AddNewInput(const vector<bool> &vb_Spikes)
 	}
 }
 
-static ofstream ofsState("ping_pong_state.csv");
+ofstream ofsState /* ("ping_pong_state.csv") */;
 vector<float> vr_CurrentPhaseSpacePoint(5);
 
 int ClusterBayes::Predict()
@@ -395,10 +396,12 @@ int ClusterBayes::Predict()
             }
         }
 
-		ofsState << ntact << ',' << PredictedLevel;
-		for (auto z: vr_CurrentPhaseSpacePoint)
-			ofsState << ',' << z;
-		ofsState << endl;
+		if (ofsState.is_open()) {
+			ofsState << ntact << ',' << PredictedLevel;
+			for (auto z: vr_CurrentPhaseSpacePoint)
+				ofsState << ',' << z;
+			ofsState << endl;
+		}
 
 		return PredictedLevel;
     }
@@ -463,8 +466,6 @@ deque<vector<bool> > qvb_Neuron, qvb_;
 unique_ptr<ClusterBayes> cb;
 map<vector<int>, vector<int> > mvindvn_;
 int nRewardedTacts = 0;
-//ofstream ofsrews("rews.csv");
-//ofstream ofsBayes("Bayes.csv");
 double d2cur = 0.;
 
 class AdaptiveSpikeSource
@@ -501,10 +502,6 @@ protected:
 #define indRaster vind_[5]
 
 		UpdateWorld(vr_CurrentPhaseSpacePoint);
-		/*
-		for (auto z: vr_PhaseSpacePoint)
-			ofsState << z << ',';
-		ofsState << endl; */
 		indxBall = (int)((vr_CurrentPhaseSpacePoint[0] + 0.5) / (1. / nSpatialZones));
 		if (indxBall == nSpatialZones)
 			indxBall = nSpatialZones - 1;
@@ -823,6 +820,14 @@ PING_PONG_ENVIRONMENT_EXPORT void SetParametersOut(int ExperimentId, size_t tact
 {
 	nNeuronsperAction = (int)nOutputNeurons / 2;
 	tactStart = atoi_s(xn.child("start_time").child_value());
+
+	NeuronTimeDepth = atoi_s(xn.child("NeuronTimeDepth").child_value());
+	float rNSpikesperNeuronTime = atof_s(xn.child("rNSpikesperNeuronTime").child_value());
+	rStateFiringFrequency = rNSpikesperNeuronTime / NeuronTimeDepth;
+	int LevelDuration = atoi_s(xn.child("LevelDuration").child_value());
+	LevelNeuronPeriod = max(LevelDuration / NeuronTimeDepth, 1);
+	minnSignificantExtraSpikes = atoi_s(xn.child("minnSignificantExtraSpikes").child_value());
+
 }
 
 PING_PONG_ENVIRONMENT_EXPORT bool ObtainOutputSpikes(const vector<int> &v_Firing, int nEquilibriumPeriods)
@@ -840,11 +845,6 @@ PING_PONG_ENVIRONMENT_EXPORT bool ObtainOutputSpikes(const vector<int> &v_Firing
 		*es.prRacket = -0.5F + RACKET_SIZE / 2;
 
 	if (ntact && !(ntact % 200000)) {
-		/*
-		for (int z = 0; z <= nGoalLevels; ++z)
-			FORI(nInputs)
-				ofsBayes << BayesModel[z][_i] << (_i < nInputs - 1 ? ',' : '\n');
-		ofsBayes << endl; */
 		cout << "rew " << nRewards << " pun " << nPunishments << endl;
 		nRewards = nPunishments = 0;
 	}
@@ -859,11 +859,6 @@ int nCorr = 0;
 
 PING_PONG_ENVIRONMENT_EXPORT int Finalize(int OriginalTerminationCode) 
 {
-	/*
-	for (int z = 0; z <= nGoalLevels; ++z)
-		FORI(nInputs)
-			ofsBayes << BayesModel[z][_i] << (_i < nInputs - 1 ? ',' : '\n');
-	*/
 	cout << "rew " << nRewards << " pun " << nPunishments << endl;
 	return nRewardsTot * 10000 / (nPunishmentsTot + nRewardsTot);
 }
