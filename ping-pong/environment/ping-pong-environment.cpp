@@ -329,7 +329,7 @@ void ClusterBayes::AddNewInput(const vector<bool> &vb_Spikes)
 	}
 }
 
-ofstream ofsState /* ("ping_pong_state.csv") */;
+ofstream ofsState("ping_pong_state.csv");
 vector<float> vr_CurrentPhaseSpacePoint(5);
 
 int ClusterBayes::Predict()
@@ -832,17 +832,24 @@ PING_PONG_ENVIRONMENT_EXPORT void SetParametersOut(int ExperimentId, size_t tact
 
 PING_PONG_ENVIRONMENT_EXPORT bool ObtainOutputSpikes(const vector<int> &v_Firing, int nEquilibriumPeriods)
 {
+	static int NoMoveTacts = 0;
 	int nCommandsDown = count_if(v_Firing.begin(), v_Firing.end(), bind2nd(less<int>(), nNeuronsperAction));
 	auto r = rAction * ((int)v_Firing.size() - 2 * nCommandsDown);
 	if (r) {
 		CurrentLevel = cb->Predict();
 		tactLevelFixed = ntact;
 	}
+	auto rsav = *es.prRacket;
 	*es.prRacket += r;
 	if (*es.prRacket > 0.5F - RACKET_SIZE / 2)
 		*es.prRacket = 0.5F - RACKET_SIZE / 2;
 	else if (*es.prRacket < -0.5F + RACKET_SIZE / 2)
 		*es.prRacket = -0.5F + RACKET_SIZE / 2;
+
+	if (*es.prRacket == rsav) {
+		if (++NoMoveTacts == 100000)
+			return false;
+	} else NoMoveTacts = 0;
 
 	if (ntact && !(ntact % 200000)) {
 		cout << "rew " << nRewards << " pun " << nPunishments << endl;
