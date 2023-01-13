@@ -113,21 +113,23 @@ public:
 			pprr_Ball = (pair<float, float> *)region->get_address();
 		} else pprr_Ball = &pprrr_LocalState.first;
 	}
-	void ResetBall();
+	void ResetBall(bool bPunishment = true);
 } es;
 
 pair<float, float> prr_BallSpeed;
 
-void EnvironmentState::ResetBall()
+void EnvironmentState::ResetBall(bool bPunishment)
 {
-	es.pprr_Ball->first = 0.F;
-	es.pprr_Ball->second = (float)(-0.5 + rng());
+	if (bPunishment) {
+		es.pprr_Ball->first = 0.F;
+		es.pprr_Ball->second = (float)(-0.5 + rng());
+	}
 	float rBallVelocity = rMakeBallVelocity();
 	float rBallMovementDirection;
 	do {
 		rBallMovementDirection = (float)rng(2 * M_PI);
 		prr_BallSpeed.first = rBallVelocity * sin(rBallMovementDirection);
-	} while (prr_BallSpeed.first < 1. / (2 * maxSpotPassageTime_ms));
+	} while (prr_BallSpeed.first < 1. / (2 * maxSpotPassageTime_ms) || !bPunishment && prr_BallSpeed.first < 0.);
 	prr_BallSpeed.second = rBallVelocity * cos(rBallMovementDirection);
 }
 
@@ -146,8 +148,9 @@ void UpdateWorld(vector<float> &vr_PhaseSpacePoint)
 	vr_PhaseSpacePoint[4] = *es.prRacket;
 
 	if (es.pprr_Ball->first < -0.5F)   // PUNISHMENT
-		es.ResetBall();
+		es.ResetBall(true);
 	else {
+		bool bnegx = es.pprr_Ball->first < 0.;
 		es.pprr_Ball->first += prr_BallSpeed.first;
 		if (es.pprr_Ball->first < -0.5F && es.pprr_Ball->second > *es.prRacket - RACKET_SIZE / 2 && es.pprr_Ball->second < *es.prRacket + RACKET_SIZE / 2) {
 			es.pprr_Ball->first = -0.5F;   // REWARD
@@ -166,6 +169,8 @@ void UpdateWorld(vector<float> &vr_PhaseSpacePoint)
 			es.pprr_Ball->second = 0.5F;
 			prr_BallSpeed.second = -prr_BallSpeed.second;
 		}
+		if (bnegx && es.pprr_Ball->first > 0.)
+			es.ResetBall(false);
 	}
 }
 
