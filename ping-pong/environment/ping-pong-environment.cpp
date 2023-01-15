@@ -334,11 +334,14 @@ void ClusterBayes::AddNewInput(const vector<bool> &vb_Spikes)
 	}
 }
 
-ofstream ofsState("ping_pong_state.csv");
+ofstream ofsState /*("ping_pong_state.csv") */;
 vector<float> vr_CurrentPhaseSpacePoint(5);
 
 int ClusterBayes::Predict()
 {
+	double d = sqrt((vr_CurrentPhaseSpacePoint[0] + 0.5) * (vr_CurrentPhaseSpacePoint[0] + 0.5) + (vr_CurrentPhaseSpacePoint[1] - vr_CurrentPhaseSpacePoint[4]) * (vr_CurrentPhaseSpacePoint[1] - vr_CurrentPhaseSpacePoint[4]));
+	if (CurrentLevel != 1000)
+		return min((int)(d / 0.1), 4);
     unsigned j;
     if (nLevelMeasurements(0)) {
         set<FeaturePair, greater<FeaturePair> > asspairs;
