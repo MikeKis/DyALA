@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <SNN>
   <Global>0</Global>
-  <Global>$(STABILITYINC)</Global>
-  <Global>$(STABILITYDEC)</Global>
   <Receptors name="Punishment" N="1">
     <!--NOT USED NOW-->
     <Implementation lib="ping-pong-environment"></Implementation>
