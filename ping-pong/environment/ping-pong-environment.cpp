@@ -334,7 +334,7 @@ void ClusterBayes::AddNewInput(const vector<bool> &vb_Spikes)
 	}
 }
 
-ofstream ofsState /*("ping_pong_state.csv") */;
+ofstream ofsState /*("ping_pong_state.csv")*/;
 vector<float> vr_CurrentPhaseSpacePoint(5);
 
 int ClusterBayes::Predict()
