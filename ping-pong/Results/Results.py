@@ -8,9 +8,9 @@ import statistics
 import bisect
 import math
 
-file = "monitoring.4.csv"
-ReceptorSectionBoundaries = [133,134,135,136,13]
-indLA = [0, 20]
+file = "monitoring.5.csv"
+ReceptorSectionBoundaries = [1,2,6,10]   # It is assumed that first 4 sections are primary and secondary evaluation.
+indLA = [0, 12]
 
 nActions = 2
 
@@ -38,7 +38,7 @@ migrations = []
 neuintA = [0 for i in range(indLA[1] - indLA[0])]
 stabilityA = [[] for i in range(indLA[1] - indLA[0])]
 
-maxtact = 1000000
+maxtact = 2000000
 
 # It is guaranteed that all records are ordered by tact
 
@@ -85,7 +85,7 @@ with open(file, newline = '') as fil:
             neu = int(row[2])
             if indLA[0] <= neu < indLA[1]:
                 neuintA[neu - indLA[0]] += int(row[3])
-                stabilityA[neu - indLA[0]].append(int(row[12]))
+                stabilityA[neu - indLA[0]].append(float(row[13]))
 
 nNeuronsperAction = int((indLA[1] - indLA[0]) / nActions)
 
@@ -195,8 +195,8 @@ while i <= len(lin):
                 else:
                     deffw_sum[strLink][-1] += abs(effw[i])
 
-                if  indLA[0] <= lin[i].neu < indLA[1] and 0 <= lin[i].src < ReceptorSectionBoundaries[0]:
-                    ind = lin[i].src
+                if  indLA[0] <= lin[i].neu < indLA[1] and lin[i].src >= ReceptorSectionBoundaries[3]:
+                    ind = lin[i].src - ReceptorSectionBoundaries[3]
                     if ind < nSpatialZones:
                         RecFieldA[-1][lin[i].neu - indLA[0]][0][ind] = lin[i].W
                     ind -= nSpatialZones
