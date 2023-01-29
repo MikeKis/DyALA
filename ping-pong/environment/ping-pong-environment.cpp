@@ -179,11 +179,16 @@ int nGoalLevels;
 int CurrentLevel;
 int tactLevelFixed = -1000; // = never
 
+int PunishedLevel;   // used only in surrogate Bayes
+
 class ClusterBayes
 {
     map<vector<unsigned>, vector<double> >     mvvd_BayesModel;
     vector<double>                             vd_BayesPriors;
     deque<vector<bool> >                       qvb_RecentNeuronInput;
+
+    deque<int>                                 q_TrueLevel;   // used only in this version of surragate Bayes neuron mechanism.
+
     deque<vector<bool> >                       qvb_NeuronInput;
     vector<vector<vector<bool> > >             vvvb_byLevels;
     vector<int>                                vn_Neuron;
@@ -314,6 +319,15 @@ public:
     }
 };
 
+ofstream ofsState("ping_pong_state.csv");
+vector<float> vr_CurrentPhaseSpacePoint(5);
+
+int TrueCurrentLevel()
+{
+    double d = sqrt((vr_CurrentPhaseSpacePoint[0] + 0.5) * (vr_CurrentPhaseSpacePoint[0] + 0.5) + (vr_CurrentPhaseSpacePoint[1] - vr_CurrentPhaseSpacePoint[4]) * (vr_CurrentPhaseSpacePoint[1] - vr_CurrentPhaseSpacePoint[4]));
+    return min((int)(d / 0.1), 4);
+}
+
 void ClusterBayes::AddNewInput(const vector<bool> &vb_Spikes)
 {
 	FORI(nInputs)
@@ -331,17 +345,19 @@ void ClusterBayes::AddNewInput(const vector<bool> &vb_Spikes)
 		FORI(nInputs)
 			if (vn_Neuron[_i])
 				qvb_RecentNeuronInput.front()[_i] = true;
-	}
+
+        q_TrueLevel.push_front(TrueCurrentLevel());
+
+    }
 }
 
-ofstream ofsState /*("ping_pong_state.csv")*/;
-vector<float> vr_CurrentPhaseSpacePoint(5);
+size_t tactStart = 0;
+vector<int> v_err;
 
 int ClusterBayes::Predict()
 {
-	double d = sqrt((vr_CurrentPhaseSpacePoint[0] + 0.5) * (vr_CurrentPhaseSpacePoint[0] + 0.5) + (vr_CurrentPhaseSpacePoint[1] - vr_CurrentPhaseSpacePoint[4]) * (vr_CurrentPhaseSpacePoint[1] - vr_CurrentPhaseSpacePoint[4]));
-	if (CurrentLevel != 1000)
-		return min((int)(d / 0.1), 4);
+//	if (CurrentLevel != 1000)
+//        return TrueCurrentLevel();
     unsigned j;
     if (nLevelMeasurements(0)) {
         set<FeaturePair, greater<FeaturePair> > asspairs;
@@ -405,11 +421,13 @@ int ClusterBayes::Predict()
         }
 
 		if (ofsState.is_open()) {
-			ofsState << ntact << ',' << PredictedLevel;
+            ofsState << ntact << ',' << PredictedLevel << ',' << TrueCurrentLevel();
 			for (auto z: vr_CurrentPhaseSpacePoint)
 				ofsState << ',' << z;
 			ofsState << endl;
 		}
+        if (ntact >= tactStart)
+            v_err.push_back(PredictedLevel - CurrentLevel);
 
 		return PredictedLevel;
     }
@@ -418,37 +436,51 @@ int ClusterBayes::Predict()
 
 void ClusterBayes::FixReward()
 {
-    unsigned j;
-    size_t l;
+    unsigned j, lev;
+    size_t l, m;
     ntotMeasurements += qvb_RecentNeuronInput.size();
-    for (j = 0; j < nGoalLevels && qvb_RecentNeuronInput.size(); ++j) {
-        auto i = qvb_RecentNeuronInput.size() > LevelNeuronPeriod ? qvb_RecentNeuronInput.begin() + LevelNeuronPeriod : qvb_RecentNeuronInput.end();
-        vvvb_byLevels[j].insert(vvvb_byLevels[j].end(), qvb_RecentNeuronInput.begin(),  i);
-        auto k = qvb_RecentNeuronInput.begin();
-        while (k != i) {
-            FORI(nInputs)
-                if ((*k)[_i]) {
-                    ++smvn_Pairs(_i, _i)[j];
-                    FOR_(l, _i)
-                        if ((*k)[l])
-                            ++smvn_Pairs(_i, l)[j];
-                }
-            ++k;
-        }
-        qvb_RecentNeuronInput.erase(qvb_RecentNeuronInput.begin(), i);
+//    for (lev = 0; lev < nGoalLevels && qvb_RecentNeuronInput.size(); ++lev) {
+//        auto i = qvb_RecentNeuronInput.size() > LevelNeuronPeriod ? qvb_RecentNeuronInput.begin() + LevelNeuronPeriod : qvb_RecentNeuronInput.end();
+//        vvvb_byLevels[lev].insert(vvvb_byLevels[lev].end(), qvb_RecentNeuronInput.begin(),  i);
+//        auto k = qvb_RecentNeuronInput.begin();
+//        while (k != i) {
+//            FORI(nInputs)
+//                if ((*k)[_i]) {
+//                    ++smvn_Pairs(_i, _i)[lev];
+//                    FOR_(l, _i)
+//                        if ((*k)[l])
+//                            ++smvn_Pairs(_i, l)[lev];
+//                }
+//            ++k;
+//        }
+//        qvb_RecentNeuronInput.erase(qvb_RecentNeuronInput.begin(), i);
+//    }
+//    if (lev == nGoalLevels) {
+//        for (const auto &m: vvvb_byLevels[lev])
+//            FORI(nInputs)
+//                if (m[_i]) {
+//                    ++smvn_Pairs(_i, _i)[lev];
+//                    FOR_(l, _i)
+//                        if (m[l])
+//                            ++smvn_Pairs(_i, l)[lev];
+//                }
+//        vvvb_byLevels[lev].insert(vvvb_byLevels[lev].end(), qvb_RecentNeuronInput.begin(),  qvb_RecentNeuronInput.end());
+//    }
+//    qvb_RecentNeuronInput.clear();
+
+    FOR_(m, q_TrueLevel.size()) {
+        vvvb_byLevels[q_TrueLevel[m]].push_back(qvb_RecentNeuronInput[m]);
+        FORI(nInputs)
+            if (qvb_RecentNeuronInput[m][_i]) {
+                ++smvn_Pairs(_i, _i)[q_TrueLevel[m]];
+                FOR_(l, _i)
+                    if (qvb_RecentNeuronInput[m][l])
+                        ++smvn_Pairs(_i, l)[q_TrueLevel[m]];
+            }
     }
-    if (j == nGoalLevels) {
-        for (const auto &m: vvvb_byLevels[j])
-            FORI(nInputs)
-                if (m[_i]) {
-                    ++smvn_Pairs(_i, _i)[j];
-                    FOR_(l, _i)
-                        if (m[l])
-                            ++smvn_Pairs(_i, l)[j];
-                }
-        vvvb_byLevels[j].insert(vvvb_byLevels[j].end(), qvb_RecentNeuronInput.begin(),  qvb_RecentNeuronInput.end());
-    }
+    q_TrueLevel.clear();
     qvb_RecentNeuronInput.clear();
+
     mmd_AssociatedPairs.clear();
 	FORI(nGoalLevels) {
 		j = 0;
@@ -632,7 +664,6 @@ const int RewardTrainLength = 1 /*10*/;
 const int RewardTrainPeriod = 2;
 
 bool b_forVerifier_Reward = false;
-size_t tactStart = 0;
 
 class DYNAMIC_LIBRARY_EXPORTED_CLASS Evaluator: public IReceptors
 {
@@ -693,15 +724,17 @@ public:
 									int NewLevel = cb->Predict();
 									if (NewLevel < CurrentLevel) {
 										prec[neuronstrsize * NewLevel] = 1;
-										CurrentLevel = -1;   // It means no punishment
+                                        PunishedLevel = -1;
 									} else if (NewLevel == CurrentLevel)
-										CurrentLevel = -1;
+                                        PunishedLevel = -1;
+                                    else PunishedLevel = CurrentLevel;
+                                    CurrentLevel = NewLevel;
 								 }
 				                 return true;
 			default: FORI(nGoalLevels) 
 						prec[_i * neuronstrsize] = 0;
-					 if (ntact == tactLevelFixed + NeuronTimeDepth && CurrentLevel >= 0)
-						 prec[neuronstrsize * CurrentLevel] = 1;
+                     if (ntact == tactLevelFixed + NeuronTimeDepth && PunishedLevel >= 0)
+                         prec[neuronstrsize * PunishedLevel] = 1;
 					 return true;
 		}
 		*prec = 0;
@@ -787,7 +820,7 @@ PING_PONG_ENVIRONMENT_EXPORT IReceptors *SetParametersIn(int &nReceptors, const 
 		case 1: nReceptors = 1;
 			    return new Evaluator(Evaluator::reward);
 
-		case 2: nGoalLevels = nReceptors;
+        case 2: CurrentLevel = nGoalLevels = nReceptors;
 				return new Evaluator(Evaluator::_debug_rewnorm);
 		case 3: nReceptors = nGoalLevels;
 			    return new Evaluator(Evaluator::_debug_punishment);
@@ -875,6 +908,11 @@ int nCorr = 0;
 PING_PONG_ENVIRONMENT_EXPORT int Finalize(int OriginalTerminationCode) 
 {
 	cout << "rew " << nRewards << " pun " << nPunishments << endl;
+
+    double dmean, dstderr;
+    avgdis(&v_err.front(), v_err.size(), dmean, dstderr);
+    cout << "err: mean " << dmean << " stderr " << dstderr << endl;
+
 	return nRewardsTot * 10000 / (nPunishmentsTot + nRewardsTot);
 }
 
