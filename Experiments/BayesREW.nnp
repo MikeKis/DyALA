@@ -17,6 +17,9 @@
   <Receptors name="R" N="133">
     <Implementation lib="ping-pong-environment"></Implementation>
   </Receptors>
+  <Receptors name="LEV0" N="1">
+    <Implementation lib="ping-pong-environment"></Implementation>
+  </Receptors>
   <Network>
     <Implementation lib="DyALA">
       <args>
@@ -38,11 +41,21 @@
 	<SPARCITY>$(SPARCITY)</SPARCITY>
 	<STABILITYRESOURCECHANGERATIO>$(STABILITYRESOURCECHANGERATIO)</STABILITYRESOURCECHANGERATIO>
         <NPRIMARYSTATERECOGNIZERS>10</NPRIMARYSTATERECOGNIZERS>
+
+
+	<NBLOCKERNEURONSPERACTION>$(NBLOCKERNEURONSPERACTION)</NBLOCKERNEURONSPERACTION>
+	<BLOCKERCHARTIME>$(BLOCKERCHARTIME)</BLOCKERCHARTIME>LLATERALBLOCKINGTIME
+	<BLOCKERDW>$(BLOCKERDW)</BLOCKERDW> 
+	<LLATERALBLOCKINGTIME>$(LLATERALBLOCKINGTIME)</LLATERALBLOCKINGTIME>
+	<BLOCKTIME>$(BLOCKTIME)</BLOCKTIME>
+	<BLOCKERWEIGHTRELATIVEPUNISHMENT>$(BLOCKERWEIGHTRELATIVEPUNISHMENT)</BLOCKERWEIGHTRELATIVEPUNISHMENT>
+
+
       </args>
     </Implementation>
   </Network>
    <Readout lib="ping-pong-environment">
-    <output>L</output>
+    <output>FINALGATEACT</output>
     <args>
       <start_time>1000000</start_time> 
 

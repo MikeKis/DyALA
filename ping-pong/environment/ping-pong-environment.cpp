@@ -177,6 +177,7 @@ void UpdateWorld(vector<float> &vr_PhaseSpacePoint)
 int ntact = 0;
 int nGoalLevels;
 int CurrentLevel;
+bool bTargetState = false;
 int tactLevelFixed = -1000; // = never
 
 class ClusterBayes
@@ -334,14 +335,26 @@ void ClusterBayes::AddNewInput(const vector<bool> &vb_Spikes)
 	}
 }
 
-ofstream ofsState /*("ping_pong_state.csv")*/;
+ofstream ofsState("ping_pong_state.csv");
 vector<float> vr_CurrentPhaseSpacePoint(5);
 
 int ClusterBayes::Predict()
 {
 	double d = sqrt((vr_CurrentPhaseSpacePoint[0] + 0.5) * (vr_CurrentPhaseSpacePoint[0] + 0.5) + (vr_CurrentPhaseSpacePoint[1] - vr_CurrentPhaseSpacePoint[4]) * (vr_CurrentPhaseSpacePoint[1] - vr_CurrentPhaseSpacePoint[4]));
-	if (CurrentLevel != 1000)
-		return min((int)(d / 0.1), 4);
+	if (CurrentLevel != 1000) {
+		int PredictedLevel = min((int)(d / 0.1), 4);
+
+		if (ofsState.is_open()) {
+			ofsState << ntact << ',' << PredictedLevel;
+			for (auto z : vr_CurrentPhaseSpacePoint)
+				ofsState << ',' << z;
+			ofsState << endl;
+		}
+
+		bTargetState = !PredictedLevel;
+
+		return PredictedLevel;
+	}
     unsigned j;
     if (nLevelMeasurements(0)) {
         set<FeaturePair, greater<FeaturePair> > asspairs;
@@ -641,8 +654,10 @@ public:
 	{
 		reward,
 		punishment,
+
 		_debug_rewnorm,
-		_debug_punishment
+		_debug_punishment,
+		_level0
 	};
 private:
 	enum Evaluator::type typ;
@@ -665,12 +680,12 @@ protected:
 		}
 	}
 public:
-	Evaluator(enum Evaluator::type t, size_t tactbeg = 0) : IReceptors(t == reward || t == punishment ? 1 : nGoalLevels), typ(t) {}
+	Evaluator(enum Evaluator::type t, size_t tactbeg = 0) : IReceptors(t == reward || t == punishment || t == _level0 ? 1 : nGoalLevels), typ(t) {}
 	virtual bool bGenerateReceptorSignals(char *prec, size_t neuronstrsize) override
 	{
 		switch (typ) {
 			case punishment: if (es.pprr_Ball->first < -0.5F) {
-//								TrainCounter = RewardTrainLength;  no primary punishment
+								TrainCounter = RewardTrainLength;
 								PeriodCounter = 1;
 								if (ntact >= tactStart)
 									++nPunishmentsTot;
@@ -698,11 +713,13 @@ public:
 										CurrentLevel = -1;
 								 }
 				                 return true;
-			default: FORI(nGoalLevels) 
-						prec[_i * neuronstrsize] = 0;
-					 if (ntact == tactLevelFixed + NeuronTimeDepth && CurrentLevel >= 0)
-						 prec[neuronstrsize * CurrentLevel] = 1;
-					 return true;
+			case _debug_punishment: FORI(nGoalLevels)
+										prec[_i * neuronstrsize] = 0;
+									 if (ntact == tactLevelFixed + NeuronTimeDepth && CurrentLevel >= 0)
+										 prec[neuronstrsize * CurrentLevel] = 1;
+									 return true;
+			default: *prec = bTargetState && !(ntact % 3);
+				return true;
 		}
 		*prec = 0;
 		if (TrainCounter && !--PeriodCounter) {
@@ -793,6 +810,10 @@ PING_PONG_ENVIRONMENT_EXPORT IReceptors *SetParametersIn(int &nReceptors, const 
 			    return new Evaluator(Evaluator::_debug_punishment);
 		case 4: nReceptors = nInputs;
 			    return new rec_ping_pong;
+
+		case 5: nReceptors = 1;
+			    return new Evaluator(Evaluator::_level0);
+
 
 		default: cout << "Too many calls of SetParametersIn\n";
 				exit(-1);
