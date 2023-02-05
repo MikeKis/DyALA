@@ -62,6 +62,8 @@ float rStateFiringFrequency /* = 5.F / NeuronTimeDepth */;
 int LevelNeuronPeriod /* = LevelDuration / NeuronTimeDepth */;
 int minnSignificantExtraSpikes = 10;
 
+int tactStart;
+
 class RandomNumberGenerator
 {
 	uniform_real_distribution<> urd;
@@ -180,11 +182,16 @@ int CurrentLevel;
 bool bTargetState = false;
 int tactLevelFixed = -1000; // = never
 
+int PunishedLevel;   // used only in surrogate Bayes
+
 class ClusterBayes
 {
     map<vector<unsigned>, vector<double> >     mvvd_BayesModel;
     vector<double>                             vd_BayesPriors;
     deque<vector<bool> >                       qvb_RecentNeuronInput;
+
+    deque<int>                                 q_TrueLevel;   // used only in this version of surragate Bayes neuron mechanism.
+
     deque<vector<bool> >                       qvb_NeuronInput;
     vector<vector<vector<bool> > >             vvvb_byLevels;
     vector<int>                                vn_Neuron;
@@ -315,6 +322,15 @@ public:
     }
 };
 
+ofstream ofsState /*("ping_pong_state.csv") */;
+vector<float> vr_CurrentPhaseSpacePoint(5);
+
+int TrueCurrentLevel()
+{
+    double d = sqrt((vr_CurrentPhaseSpacePoint[0] + 0.5) * (vr_CurrentPhaseSpacePoint[0] + 0.5) + (vr_CurrentPhaseSpacePoint[1] - vr_CurrentPhaseSpacePoint[4]) * (vr_CurrentPhaseSpacePoint[1] - vr_CurrentPhaseSpacePoint[4]));
+    return min((int)(d / 0.1), 4);
+}
+
 void ClusterBayes::AddNewInput(const vector<bool> &vb_Spikes)
 {
 	FORI(nInputs)
@@ -332,11 +348,11 @@ void ClusterBayes::AddNewInput(const vector<bool> &vb_Spikes)
 		FORI(nInputs)
 			if (vn_Neuron[_i])
 				qvb_RecentNeuronInput.front()[_i] = true;
+
+        q_TrueLevel.push_front(TrueCurrentLevel());
+
 	}
 }
-
-ofstream ofsState("ping_pong_state.csv");
-vector<float> vr_CurrentPhaseSpacePoint(5);
 
 int ClusterBayes::Predict()
 {
@@ -355,121 +371,138 @@ int ClusterBayes::Predict()
 
 		return PredictedLevel;
 	}
-    unsigned j;
-    if (nLevelMeasurements(0)) {
-        set<FeaturePair, greater<FeaturePair> > asspairs;
-		vector<bool> vb_SingleFeatures(nInputs, false);
-		for (size_t k = 0; k <= sizeof(aAlternativeInputBoundaries) / sizeof(aAlternativeInputBoundaries[0]); ++k) {
-			pair<int, int> p_(!k ? 0 : aAlternativeInputBoundaries[k - 1], k < sizeof(aAlternativeInputBoundaries) / sizeof(aAlternativeInputBoundaries[0]) ? aAlternativeInputBoundaries[k] : nInputs);
-			int nmax = -1;
-			int indmax;
-			int ind = p_.first + ntact % (p_.second - p_.first);
-			FORI(p_.second - p_.first) {
-				if (vn_Neuron[ind] > nmax) {
-					nmax = vn_Neuron[ind];
-					indmax = ind;
-				}
-				if (++ind == p_.second)
-					ind = p_.first;
-			}
-			if (nmax)
-				vb_SingleFeatures[indmax] = true;
-		}
-		FOR_(j, nInputs - 1)
-            if (vb_SingleFeatures[j] && mmd_AssociatedPairs.find(j) != mmd_AssociatedPairs.end())
-                for (const auto &i: mmd_AssociatedPairs[j])
-					if (vb_SingleFeatures[i.first])
-						asspairs.insert(FeaturePair(i.second, j, i.first));
-        list<ClusteredFeature> lcf_;
-        ClusteredFeatureMerger cfm(*this);
-        AgglomerativeClustering(asspairs, lcf_, cfm);
-        vector<map<vector<unsigned>, vector<double> >::iterator> CurrentFeatures;
-        for (const auto &i: lcf_) {
-            auto p_ = mvvd_BayesModel.insert(pair<vector<unsigned>, vector<double> >(vector<unsigned>(i.begin(), i.end()), vector<double>(nGoalLevels + 1, 0.)));
-            CurrentFeatures.push_back(p_.first);
-            if (p_.second)
-                FORI(nGoalLevels + 1)
-                    p_.first->second[_i] = count_if(vvvb_byLevels[_i].begin(), vvvb_byLevels[_i].end(), [=](const vector<bool> &vb_){return all_of(p_.first->first.begin(), p_.first->first.end(), [&](unsigned ind){return vb_[ind];});}) /
-                                           (double)nLevelMeasurements(_i);
-			for (auto k: i)
-				vb_SingleFeatures[k] = false;
-        }
-		FOR_(j, nInputs)
-			if (vb_SingleFeatures[j]) {
-				auto p_ = mvvd_BayesModel.insert(pair<vector<unsigned>, vector<double> >(vector<unsigned>(1, j), vector<double>(nGoalLevels + 1, 0.)));
-				CurrentFeatures.push_back(p_.first);
-				if (p_.second)
-					FORI(nGoalLevels + 1)
-						p_.first->second[_i] = count_if(vvvb_byLevels[_i].begin(), vvvb_byLevels[_i].end(), [=](const vector<bool> &vb_) {return vb_[p_.first->first.front()];}) / (double)nLevelMeasurements(_i);
-			}
-        double dpmax = 0;
-        int PredictedLevel = CurrentLevel;
-        FORI(nGoalLevels + 1) {
-            double dp = vd_BayesPriors[_i];
-            for (auto i: CurrentFeatures) {
-                dp *= i->second[_i];
-                if (!dp)
-                    break;
-            }
-            if (dp > dpmax) {
-                dpmax = dp;
-                PredictedLevel = _i;
-            }
-        }
+  //  unsigned j;
+  //  if (nLevelMeasurements(0)) {
+  //      set<FeaturePair, greater<FeaturePair> > asspairs;
+		//vector<bool> vb_SingleFeatures(nInputs, false);
+		//for (size_t k = 0; k <= sizeof(aAlternativeInputBoundaries) / sizeof(aAlternativeInputBoundaries[0]); ++k) {
+		//	pair<int, int> p_(!k ? 0 : aAlternativeInputBoundaries[k - 1], k < sizeof(aAlternativeInputBoundaries) / sizeof(aAlternativeInputBoundaries[0]) ? aAlternativeInputBoundaries[k] : nInputs);
+		//	int nmax = -1;
+		//	int indmax;
+		//	int ind = p_.first + ntact % (p_.second - p_.first);
+		//	FORI(p_.second - p_.first) {
+		//		if (vn_Neuron[ind] > nmax) {
+		//			nmax = vn_Neuron[ind];
+		//			indmax = ind;
+		//		}
+		//		if (++ind == p_.second)
+		//			ind = p_.first;
+		//	}
+		//	if (nmax)
+		//		vb_SingleFeatures[indmax] = true;
+		//}
+		//FOR_(j, nInputs - 1)
+  //          if (vb_SingleFeatures[j] && mmd_AssociatedPairs.find(j) != mmd_AssociatedPairs.end())
+  //              for (const auto &i: mmd_AssociatedPairs[j])
+		//			if (vb_SingleFeatures[i.first])
+		//				asspairs.insert(FeaturePair(i.second, j, i.first));
+  //      list<ClusteredFeature> lcf_;
+  //      ClusteredFeatureMerger cfm(*this);
+  //      AgglomerativeClustering(asspairs, lcf_, cfm);
+  //      vector<map<vector<unsigned>, vector<double> >::iterator> CurrentFeatures;
+  //      for (const auto &i: lcf_) {
+  //          auto p_ = mvvd_BayesModel.insert(pair<vector<unsigned>, vector<double> >(vector<unsigned>(i.begin(), i.end()), vector<double>(nGoalLevels + 1, 0.)));
+  //          CurrentFeatures.push_back(p_.first);
+  //          if (p_.second)
+  //              FORI(nGoalLevels + 1)
+  //                  p_.first->second[_i] = count_if(vvvb_byLevels[_i].begin(), vvvb_byLevels[_i].end(), [=](const vector<bool> &vb_){return all_of(p_.first->first.begin(), p_.first->first.end(), [&](unsigned ind){return vb_[ind];});}) /
+  //                                         (double)nLevelMeasurements(_i);
+		//	for (auto k: i)
+		//		vb_SingleFeatures[k] = false;
+  //      }
+		//FOR_(j, nInputs)
+		//	if (vb_SingleFeatures[j]) {
+		//		auto p_ = mvvd_BayesModel.insert(pair<vector<unsigned>, vector<double> >(vector<unsigned>(1, j), vector<double>(nGoalLevels + 1, 0.)));
+		//		CurrentFeatures.push_back(p_.first);
+		//		if (p_.second)
+		//			FORI(nGoalLevels + 1)
+		//				p_.first->second[_i] = count_if(vvvb_byLevels[_i].begin(), vvvb_byLevels[_i].end(), [=](const vector<bool> &vb_) {return vb_[p_.first->first.front()];}) / (double)nLevelMeasurements(_i);
+		//	}
+  //      double dpmax = 0;
+  //      int PredictedLevel = CurrentLevel;
+  //      FORI(nGoalLevels + 1) {
+  //          double dp = vd_BayesPriors[_i];
+  //          for (auto i: CurrentFeatures) {
+  //              dp *= i->second[_i];
+  //              if (!dp)
+  //                  break;
+  //          }
+  //          if (dp > dpmax) {
+  //              dpmax = dp;
+  //              PredictedLevel = _i;
+  //          }
+  //      }
 
-		if (ofsState.is_open()) {
-			ofsState << ntact << ',' << PredictedLevel;
-			for (auto z: vr_CurrentPhaseSpacePoint)
-				ofsState << ',' << z;
-			ofsState << endl;
-		}
+		//if (ofsState.is_open()) {
+  //          ofsState << ntact << ',' << PredictedLevel << ',' << TrueCurrentLevel();
+		//	for (auto z: vr_CurrentPhaseSpacePoint)
+		//		ofsState << ',' << z;
+		//	ofsState << endl;
+		//}
+  //      if (ntact >= tactStart)
+  //          v_err.push_back(PredictedLevel - CurrentLevel);
 
-		return PredictedLevel;
-    }
+		//return PredictedLevel;
+  //  }
     return CurrentLevel;
 }
 
 void ClusterBayes::FixReward()
 {
     unsigned j;
-    size_t l;
+    size_t l, m;
     ntotMeasurements += qvb_RecentNeuronInput.size();
-    for (j = 0; j < nGoalLevels && qvb_RecentNeuronInput.size(); ++j) {
-        auto i = qvb_RecentNeuronInput.size() > LevelNeuronPeriod ? qvb_RecentNeuronInput.begin() + LevelNeuronPeriod : qvb_RecentNeuronInput.end();
-        vvvb_byLevels[j].insert(vvvb_byLevels[j].end(), qvb_RecentNeuronInput.begin(),  i);
-        auto k = qvb_RecentNeuronInput.begin();
-        while (k != i) {
+//	unsigned lev;
+//    for (lev = 0; lev < nGoalLevels && qvb_RecentNeuronInput.size(); ++lev) {
+//        auto i = qvb_RecentNeuronInput.size() > LevelNeuronPeriod ? qvb_RecentNeuronInput.begin() + LevelNeuronPeriod : qvb_RecentNeuronInput.end();
+//        vvvb_byLevels[lev].insert(vvvb_byLevels[lev].end(), qvb_RecentNeuronInput.begin(),  i);
+//        auto k = qvb_RecentNeuronInput.begin();
+//        while (k != i) {
+//            FORI(nInputs)
+//                if ((*k)[_i]) {
+//                    ++smvn_Pairs(_i, _i)[lev];
+//                    FOR_(l, _i)
+//                        if ((*k)[l])
+//                            ++smvn_Pairs(_i, l)[lev];
+//                }
+//            ++k;
+//        }
+//        qvb_RecentNeuronInput.erase(qvb_RecentNeuronInput.begin(), i);
+//    }
+//    if (lev == nGoalLevels) {
+//        for (const auto &m: vvvb_byLevels[lev])
+//            FORI(nInputs)
+//                if (m[_i]) {
+//                    ++smvn_Pairs(_i, _i)[lev];
+//                    FOR_(l, _i)
+//                        if (m[l])
+//                            ++smvn_Pairs(_i, l)[lev];
+//                }
+//        vvvb_byLevels[lev].insert(vvvb_byLevels[lev].end(), qvb_RecentNeuronInput.begin(),  qvb_RecentNeuronInput.end());
+//    }
+//    qvb_RecentNeuronInput.clear();
+
+    FOR_(m, q_TrueLevel.size()) {
+        vvvb_byLevels[q_TrueLevel[m]].push_back(qvb_RecentNeuronInput[m]);
             FORI(nInputs)
-                if ((*k)[_i]) {
-                    ++smvn_Pairs(_i, _i)[j];
+            if (qvb_RecentNeuronInput[m][_i]) {
+                ++smvn_Pairs(_i, _i)[q_TrueLevel[m]];
                     FOR_(l, _i)
-                        if ((*k)[l])
-                            ++smvn_Pairs(_i, l)[j];
+                    if (qvb_RecentNeuronInput[m][l])
+                        ++smvn_Pairs(_i, l)[q_TrueLevel[m]];
                 }
-            ++k;
         }
-        qvb_RecentNeuronInput.erase(qvb_RecentNeuronInput.begin(), i);
-    }
-    if (j == nGoalLevels) {
-        for (const auto &m: vvvb_byLevels[j])
-            FORI(nInputs)
-                if (m[_i]) {
-                    ++smvn_Pairs(_i, _i)[j];
-                    FOR_(l, _i)
-                        if (m[l])
-                            ++smvn_Pairs(_i, l)[j];
-                }
-        vvvb_byLevels[j].insert(vvvb_byLevels[j].end(), qvb_RecentNeuronInput.begin(),  qvb_RecentNeuronInput.end());
-    }
+    q_TrueLevel.clear();
     qvb_RecentNeuronInput.clear();
+
     mmd_AssociatedPairs.clear();
 	FORI(nGoalLevels) {
 		j = 0;
 		for (auto o: aAlternativeInputBoundaries) 
 			for (; j < o; ++j) {
-				auto n = smvn_Pairs(j, j)[_i];
+				int n = smvn_Pairs(j, j)[_i];
 				for (l = o; l < nInputs; ++l) {
-					auto n1 = smvn_Pairs(l, j)[_i];
+					int n1 = smvn_Pairs(l, j)[_i];
 					if (n1 > minnSignificantExtraSpikes / 2) {
 						double d = n1 - n * (double)smvn_Pairs(l, l)[_i] / nLevelMeasurements(_i);
 						if (d > minnSignificantExtraSpikes / 2)
@@ -645,7 +678,6 @@ const int RewardTrainLength = 1 /*10*/;
 const int RewardTrainPeriod = 2;
 
 bool b_forVerifier_Reward = false;
-size_t tactStart = 0;
 
 class DYNAMIC_LIBRARY_EXPORTED_CLASS Evaluator: public IReceptors
 {
@@ -708,15 +740,17 @@ public:
 									int NewLevel = cb->Predict();
 									if (NewLevel < CurrentLevel) {
 										prec[neuronstrsize * NewLevel] = 1;
-										CurrentLevel = -1;   // It means no punishment
+                                        PunishedLevel = -1;
 									} else if (NewLevel == CurrentLevel)
-										CurrentLevel = -1;
+                                        PunishedLevel = -1;
+                                    else PunishedLevel = CurrentLevel;
+                                    CurrentLevel = NewLevel;
 								 }
 				                 return true;
 			case _debug_punishment: FORI(nGoalLevels)
 										prec[_i * neuronstrsize] = 0;
-									 if (ntact == tactLevelFixed + NeuronTimeDepth && CurrentLevel >= 0)
-										 prec[neuronstrsize * CurrentLevel] = 1;
+                     if (ntact == tactLevelFixed + NeuronTimeDepth && PunishedLevel >= 0)
+                         prec[neuronstrsize * PunishedLevel] = 1;
 									 return true;
 			default: *prec = bTargetState && !(ntact % 3);
 				return true;
@@ -804,7 +838,7 @@ PING_PONG_ENVIRONMENT_EXPORT IReceptors *SetParametersIn(int &nReceptors, const 
 		case 1: nReceptors = 1;
 			    return new Evaluator(Evaluator::reward);
 
-		case 2: nGoalLevels = nReceptors;
+        case 2: CurrentLevel = nGoalLevels = nReceptors;
 				return new Evaluator(Evaluator::_debug_rewnorm);
 		case 3: nReceptors = nGoalLevels;
 			    return new Evaluator(Evaluator::_debug_punishment);
@@ -896,6 +930,11 @@ int nCorr = 0;
 PING_PONG_ENVIRONMENT_EXPORT int Finalize(int OriginalTerminationCode) 
 {
 	cout << "rew " << nRewards << " pun " << nPunishments << endl;
+
+    //double dmean, dstderr;
+    //avgdis(&v_err.front(), v_err.size(), dmean, dstderr);
+    //cout << "err: mean " << dmean << " stderr " << dstderr << endl;
+
 	return nRewardsTot * 10000 / (nPunishmentsTot + nRewardsTot);
 }
 
