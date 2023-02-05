@@ -47,7 +47,8 @@ CHROMOSOME_DEFINITION
 
 bool Chromosome::bNoFatalDefect(void) const 
 {
-	return GV(LDOPAMINEPLASTICITYTIME) > GV(NEURONTIMEDEPTH) + 2 && GV(ACTIVATIONTIME) > GV(NEURONTIMEDEPTH) + 2;
+//	return GV(LDOPAMINEPLASTICITYTIME) > GV(NEURONTIMEDEPTH) + 2 && GV(ACTIVATIONTIME) > GV(NEURONTIMEDEPTH) + 2;
+	return true;
 }
 
 int StructuralCriterion(int){return 0;}   // not used

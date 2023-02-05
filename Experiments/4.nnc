@@ -1,12 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <SNN>
   <Global>0</Global>
-  <Global>1</Global>
-  <Global>1</Global>
-  <!--NOT USED ???-->
-  <Receptors name="R" N="133">
-    <Implementation lib="ping-pong-environment"></Implementation>
-  </Receptors>
+  <Global>14.8045</Global>
+  <Global>20.5175</Global>
   <Receptors name="Punishment" N="1">
     <!--NOT USED NOW-->
     <Implementation lib="ping-pong-environment"></Implementation>
@@ -14,16 +10,34 @@
   <Receptors name="Reward" N="1">
     <Implementation lib="ping-pong-environment"></Implementation>
   </Receptors>
-  <Receptors name="$$$Reward" N="1">
+  <Receptors name="$$$Reward" N="4">
     <Implementation lib="ping-pong-environment"></Implementation>
   </Receptors>
-  <Receptors name="$$$Punishment" N="1">
+  <Receptors name="$$$Punishment" N="4">
+    <Implementation lib="ping-pong-environment"></Implementation>
+  </Receptors>
+  <Receptors name="R" N="133">
     <Implementation lib="ping-pong-environment"></Implementation>
   </Receptors>
   <Network>
     <Implementation lib="DyALA">
       <args>
         <NACTIONS>2</NACTIONS>
+	<NNEURONSPERACTION>37</NNEURONSPERACTION>
+	<LCHARTIME>7</LCHARTIME>
+	<LTHRESHOLDDECAYPERIOD>34</LTHRESHOLDDECAYPERIOD>
+	<LTHRESHOLDINC>187</LTHRESHOLDINC>
+	<LPLASTICITYTIME>15</LPLASTICITYTIME>
+	<LDOPAMINEPLASTICITYTIME>48</LDOPAMINEPLASTICITYTIME>
+<!--MIGRATION-->
+    	<MIGRATION></MIGRATION>
+<!--/MIGRATION-->
+	<ACTIVATIONTIME>76</ACTIVATIONTIME>
+	<WEIGHTCHANGE>0.0381379</WEIGHTCHANGE>
+	<WEIGHTRELATIVEPUNISHMENT>0.0700232</WEIGHTRELATIVEPUNISHMENT>
+	<MAXWEIGHT>1.61602</MAXWEIGHT>
+	<DEFW>1.97902</DEFW>
+	<SPARCITY>0.272421</SPARCITY>
         <NPRIMARYSTATERECOGNIZERS>10</NPRIMARYSTATERECOGNIZERS>
       </args>
     </Implementation>
@@ -32,6 +46,12 @@
     <output>L</output>
     <args>
       <start_time>1000000</start_time> 
+
+      <NeuronTimeDepth>17</NeuronTimeDepth>
+      <rNSpikesperNeuronTime>2</rNSpikesperNeuronTime>
+      <LevelDuration>128</LevelDuration>
+      <minnSignificantExtraSpikes>18</minnSignificantExtraSpikes>
+
     </args>
    </Readout>
   <Verifyer lib="ping-pong-environment"></Verifyer>
