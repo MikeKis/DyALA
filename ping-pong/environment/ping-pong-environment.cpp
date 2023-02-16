@@ -59,6 +59,7 @@ const float rAction = 1.F / nSpatialZones;
 
 int NeuronTimeDepth = 10;    // P#1
 float rStateFiringFrequency /* = 5.F / NeuronTimeDepth */;
+int LevelDuration;
 int LevelNeuronPeriod /* = LevelDuration / NeuronTimeDepth */;
 int minnSignificantExtraSpikes = 10;
 
@@ -322,13 +323,24 @@ public:
     }
 };
 
-ofstream ofsState /*("ping_pong_state.csv") */;
+ofstream ofsState /*("ping_pong_state.csv")*/;
 vector<float> vr_CurrentPhaseSpacePoint(5);
 
 int TrueCurrentLevel()
 {
-    double d = sqrt((vr_CurrentPhaseSpacePoint[0] + 0.5) * (vr_CurrentPhaseSpacePoint[0] + 0.5) + (vr_CurrentPhaseSpacePoint[1] - vr_CurrentPhaseSpacePoint[4]) * (vr_CurrentPhaseSpacePoint[1] - vr_CurrentPhaseSpacePoint[4]));
-    return min((int)(d / 0.1), 4);
+	if (vr_CurrentPhaseSpacePoint[2] >= 0)
+		return 4;
+	double dyintersection = vr_CurrentPhaseSpacePoint[1] - (vr_CurrentPhaseSpacePoint[0] + 0.5) * vr_CurrentPhaseSpacePoint[3] / vr_CurrentPhaseSpacePoint[2];
+	if (dyintersection < vr_CurrentPhaseSpacePoint[4] - RACKET_SIZE / 2)
+		dyintersection = vr_CurrentPhaseSpacePoint[4] - RACKET_SIZE / 2;
+	else if (dyintersection > vr_CurrentPhaseSpacePoint[4] + RACKET_SIZE / 2)
+		dyintersection = vr_CurrentPhaseSpacePoint[4] + RACKET_SIZE / 2;
+	double dvs = -(vr_CurrentPhaseSpacePoint[0] + 0.5) * vr_CurrentPhaseSpacePoint[2] + (dyintersection - vr_CurrentPhaseSpacePoint[1]) * vr_CurrentPhaseSpacePoint[3];
+	if (dvs <= 0.)
+		return 4;
+	double ds2 = (vr_CurrentPhaseSpacePoint[0] + 0.5) * (vr_CurrentPhaseSpacePoint[0] + 0.5) + (vr_CurrentPhaseSpacePoint[1] - dyintersection) * (vr_CurrentPhaseSpacePoint[1] - dyintersection);
+	double dt = ds2 / dvs;
+    return min((int)(dt / LevelDuration), 4);
 }
 
 void ClusterBayes::AddNewInput(const vector<bool> &vb_Spikes)
@@ -356,9 +368,8 @@ void ClusterBayes::AddNewInput(const vector<bool> &vb_Spikes)
 
 int ClusterBayes::Predict()
 {
-	double d = sqrt((vr_CurrentPhaseSpacePoint[0] + 0.5) * (vr_CurrentPhaseSpacePoint[0] + 0.5) + (vr_CurrentPhaseSpacePoint[1] - vr_CurrentPhaseSpacePoint[4]) * (vr_CurrentPhaseSpacePoint[1] - vr_CurrentPhaseSpacePoint[4]));
 	if (CurrentLevel != 1000) {
-		int PredictedLevel = min((int)(d / 0.1), 4);
+		int PredictedLevel = TrueCurrentLevel();
 
 		if (ofsState.is_open()) {
 			ofsState << ntact << ',' << PredictedLevel;
@@ -887,7 +898,7 @@ PING_PONG_ENVIRONMENT_EXPORT void SetParametersOut(int ExperimentId, size_t tact
 	NeuronTimeDepth = atoi_s(xn.child("NeuronTimeDepth").child_value());
 	float rNSpikesperNeuronTime = atof_s(xn.child("rNSpikesperNeuronTime").child_value());
 	rStateFiringFrequency = rNSpikesperNeuronTime / NeuronTimeDepth;
-	int LevelDuration = atoi_s(xn.child("LevelDuration").child_value());
+	LevelDuration = atoi_s(xn.child("LevelDuration").child_value());
 	LevelNeuronPeriod = max(LevelDuration / NeuronTimeDepth, 1);
 	minnSignificantExtraSpikes = atoi_s(xn.child("minnSignificantExtraSpikes").child_value());
 
