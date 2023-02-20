@@ -751,15 +751,19 @@ public:
 							 break;
 			case _debug_rewnorm: FORI(nGoalLevels) 
 									prec[_i * neuronstrsize] = 0;
-								 if (ntact == tactLevelFixed + NeuronTimeDepth) {
-									int NewLevel = cb->Predict();
-									if (NewLevel < CurrentLevel) {
-										prec[neuronstrsize * NewLevel] = 1;
-                                        PunishedLevel = -1;
-									} else if (NewLevel == CurrentLevel)
-                                        PunishedLevel = -1;
-                                    else PunishedLevel = CurrentLevel;
-                                    CurrentLevel = NewLevel;
+								 if (ntact >= tactLevelFixed + NeuronTimeDepth) {
+									 if (ntact == tactLevelFixed + NeuronTimeDepth) {
+										 int NewLevel = cb->Predict();
+										 if (NewLevel < CurrentLevel) {
+											 prec[neuronstrsize * NewLevel] = 1;
+											 PunishedLevel = -1;
+										 }
+										 else if (NewLevel == CurrentLevel)
+											 PunishedLevel = -1;
+										 else PunishedLevel = CurrentLevel;
+										 CurrentLevel = NewLevel;
+									 } else if (!(ntact % NeuronTimeDepth))
+										 CurrentLevel = cb->Predict();
 								 }
 				                 return true;
 			case _debug_punishment: FORI(nGoalLevels)
