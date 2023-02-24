@@ -323,7 +323,7 @@ public:
     }
 };
 
-ofstream ofsState("ping_pong_state.csv");
+ofstream ofsState /* ("ping_pong_state.csv") */;
 vector<float> vr_CurrentPhaseSpacePoint(5);
 
 int TrueCurrentLevel()
@@ -950,9 +950,9 @@ PING_PONG_ENVIRONMENT_EXPORT int Finalize(int OriginalTerminationCode)
 {
 	cout << "rew " << nRewards << " pun " << nPunishments << endl;
 
-    double dmean, dstderr;
-    avgdis(&v_err.front(), v_err.size(), dmean, dstderr);
-    cout << "err: mean " << dmean << " stderr " << dstderr << endl;
+    //double dmean, dstderr;
+    //avgdis(&v_err.front(), v_err.size(), dmean, dstderr);
+    //cout << "err: mean " << dmean << " stderr " << dstderr << endl;
 
 	return nRewardsTot * 10000 / (nPunishmentsTot + nRewardsTot);
 }
