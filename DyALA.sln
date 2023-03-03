@@ -15,6 +15,8 @@ Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "special", "ping-pong\specia
 EndProject
 Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "blocker", "ping-pong\blocker\blocker.pyproj", "{C85C679E-E4BA-4600-955B-FED235AE54EC}"
 EndProject
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "log", "ping-pong\log\log.pyproj", "{6E73DCBD-9FBA-4733-8267-95ED83804614}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -63,6 +65,12 @@ Global
 		{C85C679E-E4BA-4600-955B-FED235AE54EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C85C679E-E4BA-4600-955B-FED235AE54EC}.Release|x64.ActiveCfg = Release|Any CPU
 		{C85C679E-E4BA-4600-955B-FED235AE54EC}.Release|x86.ActiveCfg = Release|Any CPU
+		{6E73DCBD-9FBA-4733-8267-95ED83804614}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6E73DCBD-9FBA-4733-8267-95ED83804614}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{6E73DCBD-9FBA-4733-8267-95ED83804614}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{6E73DCBD-9FBA-4733-8267-95ED83804614}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6E73DCBD-9FBA-4733-8267-95ED83804614}.Release|x64.ActiveCfg = Release|Any CPU
+		{6E73DCBD-9FBA-4733-8267-95ED83804614}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -73,6 +81,7 @@ Global
 		{14783C53-EF84-4670-A4E3-CE5CAD39F4AC} = {72A50BE0-2104-46C5-BFAD-8A492FB1FB4D}
 		{647C8877-0494-4B9C-8D56-643DC10ABD21} = {72A50BE0-2104-46C5-BFAD-8A492FB1FB4D}
 		{C85C679E-E4BA-4600-955B-FED235AE54EC} = {72A50BE0-2104-46C5-BFAD-8A492FB1FB4D}
+		{6E73DCBD-9FBA-4733-8267-95ED83804614} = {72A50BE0-2104-46C5-BFAD-8A492FB1FB4D}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0F88527E-26F8-43E0-A8C6-C3CB689440BD}

@@ -8,9 +8,10 @@ import statistics
 import bisect
 import math
 
-file = "monitoring.5.csv"
+file = "monitoring.9.csv"
 ReceptorSectionBoundaries = [1,2,6,10]   # It is assumed that first 4 sections are primary and secondary evaluation.
-indLA = [0, 12]
+indLA = [0, 8]
+SectionNames = ["L", "GATEREW", "GATEPUN", "GATEREWINT", "GATEPUNINT", "GATEACT", "GATELREW", "Blocker", "GATEBlocker", "GATEREWNoBlock", "GATEPUNNoBlock", "GATEREWBlock", "FINALGATEACT", "ACTREAL"]
 
 nActions = 2
 
@@ -106,7 +107,7 @@ for j in range(nSectionsperNetwork):
     x = [t.tact for t in secint if t.sec == s]
     y = [t.relfre for t in secint if t.sec == s]
     SecInt[s] = statistics.mean(y)
-    axs.plot(x, y, label = "%d" % (j,), linewidth = 1)
+    axs.plot(x, y, label = SectionNames[j], linewidth = 1)
     i += 1
 leg = axs.legend(loc = 'best', ncol = 2, mode = "expand", shadow = True, fancybox = True)
 leg.get_frame().set_alpha(0.5)
