@@ -848,6 +848,46 @@ public:
 
 AdaptivePoisson *papG;
 
+class DYNAMIC_LIBRARY_EXPORTED_CLASS Actions: public IReceptors
+{
+    float rPastRY = BIGREALNUMBER;
+protected:
+    virtual void GetMeanings(VECTOR<STRING> &vstr_Meanings) const override
+    {
+        vstr_Meanings.resize(2);
+        vstr_Meanings[0] = "ActDown";
+        vstr_Meanings[1] = "ActUp";
+    }
+public:
+    Actions(): IReceptors(2) {}
+    virtual bool bGenerateReceptorSignals(char *prec, size_t neuronstrsize) override
+    {
+        if (rPastRY == BIGREALNUMBER || rPastRY == vr_CurrentPhaseSpacePoint[4])
+            prec[neuronstrsize] = prec[0] = 0;
+        else if (rPastRY > vr_CurrentPhaseSpacePoint[4]) {
+            prec[neuronstrsize] = 0;
+            prec[0] = 1;
+        } else {
+            prec[neuronstrsize] = 1;
+            prec[0] = 0;
+        }
+        rPastRY = vr_CurrentPhaseSpacePoint[4];
+        return true;
+    }
+    virtual void Randomize(void) override {};
+    virtual void SaveStatus(Serializer &ser) const override
+    {
+        IReceptors::SaveStatus(ser);
+        ser << rPastRY;
+    }
+    virtual ~Actions() = default;
+    void LoadStatus(Serializer &ser)
+    {
+        IReceptors::LoadStatus(ser);
+        ser >> rPastRY;
+    }
+};
+
 PING_PONG_ENVIRONMENT_EXPORT IReceptors *SetParametersIn(int &nReceptors, const pugi::xml_node &xn)
 {
 	static int CallNo = 0;
@@ -867,8 +907,9 @@ PING_PONG_ENVIRONMENT_EXPORT IReceptors *SetParametersIn(int &nReceptors, const 
 		case 5: nReceptors = 1;
 			    return new Evaluator(Evaluator::_level0);
 
-
-		default: cout << "Too many calls of SetParametersIn\n";
+        case 6: nReceptors = 2;
+                return new Actions;
+        default: cout << "Too many calls of SetParametersIn\n";
 				exit(-1);
 	}
 }
