@@ -9,7 +9,7 @@ import bisect
 import math
 
 file = "monitoring.9.csv"
-ReceptorSectionBoundaries = [1,2,6,10]   # It is assumed that first 4 sections are primary and secondary evaluation.
+ReceptorSectionBoundaries = [1,2,6,10,144]   # It is assumed that first 4 sections are primary and secondary evaluation.
 indLA = [0, 8]
 SectionNames = ["L", "GATEREW", "GATEPUN", "GATEREWINT", "GATEPUNINT", "GATEACT", "GATELREW", "Blocker", "GATEBlocker", "GATEREWNoBlock", "GATEPUNNoBlock", "GATEREWBlock", "FINALGATEACT", "ACTREAL"]
 

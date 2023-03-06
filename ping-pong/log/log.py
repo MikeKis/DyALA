@@ -18,11 +18,11 @@ with open(log, newline = '') as fil:
             neu = int(row[2])
             if neu == 1:
                 lastspike = tact
-        elif type == "EFFW":
-            neu = int(row[2])
-            val = int(row[4])
-            if neu == 1:
-                effwtot += val
+        # elif type == "EFFW":
+        #     neu = int(row[2])
+        #     val = int(row[4])
+        #     if neu == 1:
+        #         effwtot += val
         elif type == "REWA":
             val = int(row[2])
             neu = int(row[3])
@@ -30,7 +30,7 @@ with open(log, newline = '') as fil:
             if neu == 1 and pre[0] == 'y':
                 y = int(pre[1:])
                 dwytot[y] += val
-                if y >= 25 and val > 0:
+                if y == 29 and val > 0:
                     tactrew.append(lastspike)
                     valrew.append(val)
 

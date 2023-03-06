@@ -20,6 +20,11 @@
   <Receptors name="LEV0" N="1">
     <Implementation lib="ping-pong-environment"></Implementation>
   </Receptors>
+  <Receptors name="Actions" N="2">
+    <Implementation lib="ping-pong-environment"></Implementation>
+  </Receptors>
+  <Receptors name="silent" N="$(NSILENTINPUTS)">
+  </Receptors>
   <Network>
     <Implementation lib="DyALA">
       <args>
