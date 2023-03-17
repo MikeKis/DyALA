@@ -465,9 +465,9 @@ int ClusterBayes::Predict()
 void ClusterBayes::FixReward()
 {
     unsigned j;
-    size_t l, m;
+    size_t l;
     ntotMeasurements += qvb_RecentNeuronInput.size();
-	unsigned lev;
+	int lev;
     for (lev = 0; lev < nGoalLevels && qvb_RecentNeuronInput.size(); ++lev) {
         auto i = qvb_RecentNeuronInput.size() > LevelNeuronPeriod ? qvb_RecentNeuronInput.begin() + LevelNeuronPeriod : qvb_RecentNeuronInput.end();
         vvvb_byLevels[lev].insert(vvvb_byLevels[lev].end(), qvb_RecentNeuronInput.begin(),  i);
