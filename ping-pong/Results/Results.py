@@ -8,9 +8,9 @@ import statistics
 import bisect
 import math
 
-file = "monitoring.9.csv"
+file = "monitoring.10.csv"
 ReceptorSectionBoundaries = [1,2,6,10,144]   # It is assumed that first 4 sections are primary and secondary evaluation.
-indLA = [0, 8]
+indLA = [0, 70]
 SectionNames = ["L", "GATEREW", "GATEPUN", "GATEREWINT", "GATEPUNINT", "GATEACT", "GATELREW", "Blocker", "GATEBlocker", "GATEREWNoBlock", "GATEPUNNoBlock", "GATEREWBlock", "FINALGATEACT", "ACTREAL"]
 
 nActions = 2
@@ -196,7 +196,7 @@ while i <= len(lin):
                 else:
                     deffw_sum[strLink][-1] += abs(effw[i])
 
-                if  indLA[0] <= lin[i].neu < indLA[1] and lin[i].src >= ReceptorSectionBoundaries[3]:
+                if  indLA[0] <= lin[i].neu < indLA[1] and lin[i].src >= ReceptorSectionBoundaries[3] and lin[i].src < ReceptorSectionBoundaries[4]:
                     ind = lin[i].src - ReceptorSectionBoundaries[3]
                     if ind < nSpatialZones:
                         RecFieldA[-1][lin[i].neu - indLA[0]][0][ind] = lin[i].W
@@ -273,7 +273,7 @@ plt.show()
 
 mpl.rc('font', size=10)
 coo = np.arange(0, 30)
-norm = mpl.colors.TwoSlopeNorm(vmin = -30, vcenter = 0, vmax = 100)
+norm = mpl.colors.TwoSlopeNorm(vmin = -30, vcenter = 0, vmax = 30)
 
 def draw_rec_fields(tac, reps, rec_fields):
     indtact = tact.index(tac)
@@ -297,7 +297,7 @@ def draw_rec_fields(tac, reps, rec_fields):
         axes_hist[j][3].plot(rec_fields[indtact][reps[j]][3])
         if j == 0:
             axes_hist[j][3].set_title('vy')
-        axes_hist[j][4].imshow(rec_fields[indtact][reps[j]][5], cmap = 'seismic', vmin = -30, vmax = 30, norm = norm)
+        axes_hist[j][4].imshow(rec_fields[indtact][reps[j]][5], cmap = 'seismic', norm = norm)
 
 curact = 'down'
 
@@ -324,7 +324,7 @@ for reps in ActionRepresentatives:
 
     sli.on_changed(update_sli)
 
-    plt.get_current_fig_manager().canvas.set_window_title('L receptive fields (action %s)' % (curact,))
+    plt.get_current_fig_manager().canvas.setWindowTitle('L receptive fields (action %s)' % (curact,))
     plt.show()
     curact = 'up'
 
@@ -359,7 +359,7 @@ def draw_rec_fields_all_actions(tac):
         axes_hist[j][3].plot(rfmaxA[indtact][j][3])
         if j == 0:
             axes_hist[j][3].set_title('vy')
-        axes_hist[j][4].imshow(rfmaxA[indtact][j][5], cmap = 'seismic', vmin = -30, vmax = 30, norm = norm)
+        axes_hist[j][4].imshow(rfmaxA[indtact][j][5], cmap = 'seismic', norm = norm)
 
 draw_rec_fields_all_actions(0)
 
@@ -374,5 +374,5 @@ def update_sli_all_actions(val):
 
 sli.on_changed(update_sli_all_actions)
 
-plt.get_current_fig_manager().canvas.set_window_title('L - max weights for actions')
+plt.get_current_fig_manager().canvas.setWindowTitle('L - max weights for actions')
 plt.show()
