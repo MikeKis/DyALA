@@ -230,20 +230,20 @@ vector<int> v_err;
 
 int ClusterBayes::Predict()
 {
-    if (CurrentLevel != 1000) {
-        int PredictedLevel = TrueCurrentLevel();
+//    if (CurrentLevel != 1000) {
+//        int PredictedLevel = TrueCurrentLevel();
 
-        if (ofsState.is_open()) {
-            ofsState << ntact << ',' << PredictedLevel;
-            for (auto z : vr_CurrentPhaseSpacePoint)
-                ofsState << ',' << z;
-            ofsState << endl;
-        }
+//        if (ofsState.is_open()) {
+//            ofsState << ntact << ',' << PredictedLevel;
+//            for (auto z : vr_CurrentPhaseSpacePoint)
+//                ofsState << ',' << z;
+//            ofsState << endl;
+//        }
 
-        bTargetState = !PredictedLevel;
+//        bTargetState = !PredictedLevel;
 
-        return PredictedLevel;
-    }
+//        return PredictedLevel;
+//    }
 
     unsigned j;
     if (nLevelMeasurements(0)) {

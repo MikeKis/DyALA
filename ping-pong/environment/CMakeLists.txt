@@ -5,8 +5,17 @@ set(CMAKE_CXX_STANDARD 14)
 project(ping-pong-environment CXX)
 
 add_library(${PROJECT_NAME} SHARED
-  ping-pong-environment.cpp
+  ping-pong-environment-rec.cpp
+  ping-pong-environment-rea.cpp
+  ping-pong-environment-ver.cpp
+  ClusterBayes.cpp
+  UpdateWorld.cpp
+  AdaptiveSpikeSource.cpp
+  EnvironmentState.cpp
   ping-pong-environment.h
+  EnvironmentState.hpp
+  ClusterBayes.hpp
+  AdaptiveSpikeSource.hpp
   ../../pugixml-1.10/src/pugixml.cpp
 )
 
@@ -34,6 +43,10 @@ target_compile_options(${PROJECT_NAME} PRIVATE
             -fPIC
 	    -std=c++14
             )
+
+#target_link_options(${PROJECT_NAME} PRIVATE
+#            -Wl,--no-undefined
+#            )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
         boost_system
