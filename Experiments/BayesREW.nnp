@@ -23,8 +23,6 @@
   <Receptors name="Actions" N="2">
     <Implementation lib="ping-pong-environment"></Implementation>
   </Receptors>
-  <Receptors name="silent" N="$(NSILENTINPUTS)">
-  </Receptors>
   <Network>
     <Implementation lib="DyALA">
       <args>
@@ -45,6 +43,7 @@
 	<DEFW>$(DEFW)</DEFW>
 	<MAXWEIGHT>$(MAXWEIGHT)</MAXWEIGHT>
 	<STABILITYRESOURCECHANGERATIO>$(STABILITYRESOURCECHANGERATIO)</STABILITYRESOURCECHANGERATIO>
+	<NSILENTSYNAPSES>$(NSILENTINPUTS)</NSILENTSYNAPSES>
         <NPRIMARYSTATERECOGNIZERS>10</NPRIMARYSTATERECOGNIZERS>
 
 
