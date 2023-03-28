@@ -2,17 +2,16 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>14783c53-ef84-4670-a4e3-ce5cad39f4ac</ProjectGuid>
+    <ProjectGuid>c85c679e-e4ba-4600-955b-fed235ae54ec</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>Results.py</StartupFile>
+    <StartupFile>blocker.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>C:\E\DyALA\Workplace</WorkingDirectory>
     <OutputPath>.</OutputPath>
-    <Name>Results</Name>
-    <RootNamespace>Results</RootNamespace>
+    <Name>blocker</Name>
+    <RootNamespace>blocker</RootNamespace>
     <IsWindowsApplication>False</IsWindowsApplication>
-    <InterpreterId>CondaEnv|CondaEnv|env</InterpreterId>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -23,10 +22,7 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Results.py" />
-  </ItemGroup>
-  <ItemGroup>
-    <InterpreterReference Include="CondaEnv|CondaEnv|env" />
+    <Compile Include="blocker.py" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
