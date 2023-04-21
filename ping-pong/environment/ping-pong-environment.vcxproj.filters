@@ -24,9 +24,6 @@
     <ClInclude Include="AdaptiveSpikeSource.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ClusterBayes.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="EnvironmentState.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -39,9 +36,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="AdaptiveSpikeSource.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="ClusterBayes.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="EnvironmentState.cpp">

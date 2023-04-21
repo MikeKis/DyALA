@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SNN>
+  <Global>0</Global>
+  <Receptors name="Punishment" N="1">
+    <!--NOT USED NOW-->
+    <Implementation lib="ping-pong-environment"></Implementation>
+  </Receptors>
+  <Receptors name="Reward" N="1">
+    <Implementation lib="ping-pong-environment"></Implementation>
+  </Receptors>
+  <Receptors name="R" N="133">
+    <Implementation lib="ping-pong-environment"></Implementation>
+  </Receptors>
+  <Receptors name="Actions" N="2">
+    <Implementation lib="ping-pong-environment"></Implementation>
+  </Receptors>
+  <Network>
+    <Implementation lib="NetworkLoader">
+      <args Saved="FuzzyREWRL.nns"></args>
+    </Implementation>
+    <Implementation lib="dynval">
+      <args>
+        <INPUT>L</INPUT>
+	<OUTPOS>$$$Reward</OUTPOS>
+	<OUTNEG>$$$Punishment</OUTNEG>
+      </args>
+    </Implementation>
+    <Implementation lib="DyALA">
+      <args>
+        <NACTIONS>2</NACTIONS>
+	<NNEURONSPERACTION>$(NNEURONSPERACTION)</NNEURONSPERACTION>
+	<LCHARTIME>$(LCHARTIME)</LCHARTIME>
+	<LTHRESHOLDDECAYPERIOD>$(LTHRESHOLDDECAYPERIOD)</LTHRESHOLDDECAYPERIOD>
+	<LTHRESHOLDINC>$(LTHRESHOLDINC)</LTHRESHOLDINC>
+	<LPLASTICITYTIME>$(LPLASTICITYTIME)</LPLASTICITYTIME>
+<!--MIGRATION-->
+    	<MIGRATION></MIGRATION>
+<!--/MIGRATION-->
+	<ACTIVATIONTIME>$(ACTIVATIONTIME)</ACTIVATIONTIME>
+	<LDOPAMINEPLASTICITYTIME>$(LDOPAMINEPLASTICITYTIME)</LDOPAMINEPLASTICITYTIME>
+	<WEIGHTCHANGE>$(WEIGHTCHANGE)</WEIGHTCHANGE>
+	<WEIGHTRELATIVEPUNISHMENT>$(WEIGHTRELATIVEPUNISHMENT)</WEIGHTRELATIVEPUNISHMENT>
+	<MAXDELAY>$(MAXDELAY)</MAXDELAY>
+	<DEFW>$(DEFW)</DEFW>
+	<MAXWEIGHT>$(MAXWEIGHT)</MAXWEIGHT>
+	<STABILITYRESOURCECHANGERATIO>$(STABILITYRESOURCECHANGERATIO)</STABILITYRESOURCECHANGERATIO>
+	<NSILENTSYNAPSES>$(NSILENTINPUTS)</NSILENTSYNAPSES>
+      </args>
+    </Implementation>
+  </Network>
+   <Readout lib="ping-pong-environment">
+    <output>FINALGATEACT</output>
+    <args>
+      <start_time>1000000</start_time> 
+
+      <NeuronTimeDepth>$(NEURONTIMEDEPTH)</NeuronTimeDepth>
+      <rNSpikesperNeuronTime>$(NSPIKESPERNEURONTIME)</rNSpikesperNeuronTime>
+      <LevelDuration>$(LEVELDURATION)</LevelDuration>
+      <minnSignificantExtraSpikes>$(MINNSIGNIFICANTEXTRASPIKES)</minnSignificantExtraSpikes>
+
+    </args>
+   </Readout>
+  <Verifyer lib="ping-pong-environment"></Verifyer>
+</SNN>  
