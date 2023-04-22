@@ -285,7 +285,7 @@ PING_PONG_ENVIRONMENT_EXPORT IReceptors *SetParametersIn(int &nReceptors, const 
 			    return new rec_ping_pong;
         case 3: nReceptors = 2;
                 return new Actions;
-        default: cout << "Too many calls of SetParametersIn\n";
+        default: cout << "ping-pong -- Too many calls of SetParametersIn\n";
 				exit(-1);
 	}
 }

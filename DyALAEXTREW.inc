@@ -49,7 +49,7 @@ double devaluate(int ind, const VECTOR<PAIR<float,VECTOR<PAIR<int,bool> > > > &v
 
 // Create network configuration file and storing its contents in log file
 
-    SETNNP(".." FOLDER_SEPARATOR "Experiments" FOLDER_SEPARATOR "BayesREW.nnp");
+    SETNNP(".." FOLDER_SEPARATOR "Experiments" FOLDER_SEPARATOR "ExtSNNREW.nnp");
     SUBGENE(STABILITYRESOURCECHANGERATIO);
 	SUBGENEINT(NNEURONSPERACTION);
 	SUBGENEINT(LCHARTIME);
