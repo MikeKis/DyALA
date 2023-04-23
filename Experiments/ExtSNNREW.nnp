@@ -53,12 +53,6 @@
     <output>FINALGATEACT</output>
     <args>
       <start_time>1000000</start_time> 
-
-      <NeuronTimeDepth>$(NEURONTIMEDEPTH)</NeuronTimeDepth>
-      <rNSpikesperNeuronTime>$(NSPIKESPERNEURONTIME)</rNSpikesperNeuronTime>
-      <LevelDuration>$(LEVELDURATION)</LevelDuration>
-      <minnSignificantExtraSpikes>$(MINNSIGNIFICANTEXTRASPIKES)</minnSignificantExtraSpikes>
-
     </args>
    </Readout>
   <Verifyer lib="ping-pong-environment"></Verifyer>
