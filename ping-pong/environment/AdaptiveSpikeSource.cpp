@@ -4,7 +4,7 @@
 extern int ntact;
 extern RandomNumberGenerator rng;
 
-float rStateFiringFrequency = 0.3F;
+float rStateFiringFrequency = 0.75F;
 
 bool AdaptiveSpikeSource::bFire()
 {

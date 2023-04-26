@@ -8,17 +8,17 @@ import statistics
 import bisect
 import math
 
-file = "monitoring.10.csv"
-ReceptorSectionBoundaries = [1,2,6,10,144]   # It is assumed that first 4 sections are primary and secondary evaluation.
-indLA = [0, 70]
-SectionNames = ["L", "GATEREW", "GATEPUN", "GATEREWINT", "GATEPUNINT", "GATEACT", "GATELREW", "Blocker", "GATEBlocker", "GATEREWNoBlock", "GATEPUNNoBlock", "GATEREWBlock", "FINALGATEACT", "ACTREAL"]
+file = "monitoring.2.csv"
+ReceptorSectionBoundaries = [1,2,135]   # It is assumed that first 4 sections are primary and secondary evaluation.
+indLA = [616, 692]
+SectionNames = ["L", "REWGATE", "LevelMeasurement", "$$$Reward", "MEMLEVEL", "$$$Punishment", "LACT", "GATEREW", "GATEPUN", "GATEREWINT", "GATEPUNINT", "FINALGATEACT"]
 
 nActions = 2
 
 nSpatialZones = 30
 nVelocityZones = 9
 nRelPos = 5
-nPrimaryStateRecognizers = 10
+nPrimaryStateRecognizers = 298
 
 sec = []
 CharTime = []
