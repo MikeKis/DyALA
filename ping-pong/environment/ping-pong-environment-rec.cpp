@@ -84,7 +84,7 @@ protected:
     }
 public:
     Evaluator(enum Evaluator::type t, size_t tactbeg = 0) : IReceptors(t == reward || t == punishment || t == _level0 ? 1 : nGoalLevels), typ(t) {}
-    virtual bool bGenerateReceptorSignals(char *prec, size_t neuronstrsize) override
+    virtual bool bGenerateSignals(unsigned *pfl) override
     {
         switch (typ) {
             case punishment: if (es.pprr_Ball->first < -0.5F) {
@@ -105,34 +105,34 @@ public:
                                 b_forVerifier_Reward = true;
                              }
                              break;
-            case _debug_rewnorm: FORI(nGoalLevels)
-                                    prec[_i * neuronstrsize] = 0;
-                                 if (ntact >= tactLevelFixed + NeuronTimeDepth) {
-                                     if (ntact == tactLevelFixed + NeuronTimeDepth) {
-                                         int NewLevel = cb->Predict();
-                                         if (NewLevel < CurrentLevel) {
-                                             prec[neuronstrsize * NewLevel] = 1;
-                                             PunishedLevel = -1;
-                                         }
-                                         else if (NewLevel == CurrentLevel)
-                                             PunishedLevel = -1;
-                                         else PunishedLevel = CurrentLevel;
-                                         CurrentLevel = NewLevel;
-                                     } else if (!(ntact % NeuronTimeDepth))
-                                         CurrentLevel = cb->Predict();
-                                 }
-                                 return true;
-            case _debug_punishment: FORI(nGoalLevels)
-                                        prec[_i * neuronstrsize] = 0;
-                     if (ntact == tactLevelFixed + NeuronTimeDepth && PunishedLevel >= 0)
-                         prec[neuronstrsize * PunishedLevel] = 1;
-                                     return true;
-            default: *prec = bTargetState && !(ntact % 3);
-                return true;
+            //case _debug_rewnorm: FORI(nGoalLevels)
+            //                        prec[_i * neuronstrsize] = 0;
+            //                     if (ntact >= tactLevelFixed + NeuronTimeDepth) {
+            //                         if (ntact == tactLevelFixed + NeuronTimeDepth) {
+            //                             int NewLevel = cb->Predict();
+            //                             if (NewLevel < CurrentLevel) {
+            //                                 prec[neuronstrsize * NewLevel] = 1;
+            //                                 PunishedLevel = -1;
+            //                             }
+            //                             else if (NewLevel == CurrentLevel)
+            //                                 PunishedLevel = -1;
+            //                             else PunishedLevel = CurrentLevel;
+            //                             CurrentLevel = NewLevel;
+            //                         } else if (!(ntact % NeuronTimeDepth))
+            //                             CurrentLevel = cb->Predict();
+            //                     }
+            //                     return true;
+            //case _debug_punishment: FORI(nGoalLevels)
+            //                            prec[_i * neuronstrsize] = 0;
+            //         if (ntact == tactLevelFixed + NeuronTimeDepth && PunishedLevel >= 0)
+            //             prec[neuronstrsize * PunishedLevel] = 1;
+            //                         return true;
+//            default: *prec = bTargetState && !(ntact % 3);
+//                return true;
         }
-        *prec = 0;
+        *pfl = 0;
         if (TrainCounter && !--PeriodCounter) {
-            *prec = 1;
+            *pfl = 1;
             PeriodCounter = RewardTrainPeriod;
             --TrainCounter;
         }
@@ -159,7 +159,7 @@ class DYNAMIC_LIBRARY_EXPORTED_CLASS rec_ping_pong: public IReceptors
     vector<float> vr_VelocityZoneBoundary;
     vector<AdaptiveSpikeSource> vass_;
 protected:
-    virtual bool bGenerateReceptorSignals(char *prec, size_t neuronstrsize) override
+    virtual bool bGenerateSignals(unsigned *pfl) override
     {
         vector<int> vind_(6);
 #define indxBall vind_[0]
@@ -199,10 +199,14 @@ protected:
                 vb_Spikes[nSpatialZones * 3 + nVelocityZones * 2 + indRaster] = vass_[nSpatialZones * 3 + nVelocityZones * 2 + indRaster].bFire();;
             }
         }
+        BitMaskAccess bma;
+        vector<unsigned> vfl_(AfferentSpikeBufferSizeDW(nReceptors), 0);
         for (auto i: vb_Spikes) {
-            *prec = i;
-            prec += neuronstrsize;
+            if (i)
+                &vfl_.front() |= bma;
+            ++bma;
         }
+        copy(vfl_.begin(), vfl_.end(), pfl);
 
         cb->AddNewInput(vb_Spikes);
 
@@ -299,17 +303,9 @@ protected:
     }
 public:
     Actions(): IReceptors(2) {}
-    virtual bool bGenerateReceptorSignals(char *prec, size_t neuronstrsize) override
+    virtual bool bGenerateSignals(unsigned *pfl) override
     {
-        if (rPastRY == BIGREALNUMBER || rPastRY == vr_CurrentPhaseSpacePoint[4])
-            prec[neuronstrsize] = prec[0] = 0;
-        else if (rPastRY > vr_CurrentPhaseSpacePoint[4]) {
-            prec[neuronstrsize] = 0;
-            prec[0] = 1;
-        } else {
-            prec[neuronstrsize] = 1;
-            prec[0] = 0;
-        }
+        *pfl = rPastRY == BIGREALNUMBER || rPastRY == vr_CurrentPhaseSpacePoint[4] ? 0 : rPastRY > vr_CurrentPhaseSpacePoint[4] ? 1 : 2;
         rPastRY = vr_CurrentPhaseSpacePoint[4];
         return true;
     }
@@ -336,17 +332,17 @@ PING_PONG_ENVIRONMENT_EXPORT IReceptors *SetParametersIn(int &nReceptors, const 
 		case 1: nReceptors = 1;
 			    return new Evaluator(Evaluator::reward);
 
-        case 2: CurrentLevel = nGoalLevels = nReceptors;
-				return new Evaluator(Evaluator::_debug_rewnorm);
-		case 3: nReceptors = nGoalLevels;
-			    return new Evaluator(Evaluator::_debug_punishment);
-		case 4: nReceptors = nInputs;
+  //      case 2: CurrentLevel = nGoalLevels = nReceptors;
+		//		return new Evaluator(Evaluator::_debug_rewnorm);
+		//case 3: nReceptors = nGoalLevels;
+		//	    return new Evaluator(Evaluator::_debug_punishment);
+		case 2: nReceptors = nInputs;
 			    return new rec_ping_pong;
 
-		case 5: nReceptors = 1;
-			    return new Evaluator(Evaluator::_level0);
+//		case 5: nReceptors = 1;
+//			    return new Evaluator(Evaluator::_level0);
 
-        case 6: nReceptors = 2;
+        case 3: nReceptors = 2;
                 return new Actions;
         default: cout << "Too many calls of SetParametersIn\n";
 				exit(-1);
