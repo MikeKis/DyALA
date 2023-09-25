@@ -10,7 +10,7 @@ import math
 
 file = "monitoring.2.csv"
 ReceptorSectionBoundaries = [1,2,135]   # It is assumed that first 4 sections are primary and secondary evaluation.
-indLA = [616, 692]
+indLA = [616, 668]
 SectionNames = ["L", "REWGATE", "LevelMeasurement", "$$$Reward", "MEMLEVEL", "$$$Punishment", "LACT", "GATEREW", "GATEPUN", "GATEREWINT", "GATEPUNINT", "FINALGATEACT"]
 
 nActions = 2
@@ -196,8 +196,8 @@ while i <= len(lin):
                 else:
                     deffw_sum[strLink][-1] += abs(effw[i])
 
-                if  indLA[0] <= lin[i].neu < indLA[1] and lin[i].src >= ReceptorSectionBoundaries[3] and lin[i].src < ReceptorSectionBoundaries[4]:
-                    ind = lin[i].src - ReceptorSectionBoundaries[3]
+                if  indLA[0] <= lin[i].neu < indLA[1] and ReceptorSectionBoundaries[1] <= lin[i].src < ReceptorSectionBoundaries[2]:
+                    ind = lin[i].src - ReceptorSectionBoundaries[1]
                     if ind < nSpatialZones:
                         RecFieldA[-1][lin[i].neu - indLA[0]][0][ind] = lin[i].W
                     ind -= nSpatialZones
