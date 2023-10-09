@@ -58,7 +58,7 @@ protected:
     }
 public:
     Evaluator(enum Evaluator::type t, size_t tactbeg = 0) : IReceptors(1), typ(t) {}
-    virtual bool bGenerateReceptorSignals(char *prec, size_t neuronstrsize) override
+    virtual bool bGenerateSignals(unsigned *pfl) override
     {
         switch (typ) {
             case punishment: if (es.pprr_Ball->first < -0.5F) {
@@ -79,9 +79,9 @@ public:
                              break;
             default:         return true;
         }
-        *prec = 0;
+        *pfl = 0;
         if (TrainCounter && !--PeriodCounter) {
-            *prec = 1;
+            *pfl = 1;
             PeriodCounter = RewardTrainPeriod;
             --TrainCounter;
         }
@@ -108,7 +108,7 @@ class DYNAMIC_LIBRARY_EXPORTED_CLASS rec_ping_pong: public IReceptors
     vector<float> vr_VelocityZoneBoundary;
     vector<AdaptiveSpikeSource> vass_;
 protected:
-    virtual bool bGenerateReceptorSignals(char *prec, size_t neuronstrsize) override
+    virtual bool bGenerateSignals(unsigned *pfl) override
     {
         vector<int> vind_(6);
 #define indxBall vind_[0]
@@ -120,7 +120,7 @@ protected:
 
         UpdateWorld(vr_CurrentPhaseSpacePoint);
 
-
+/*
         static ofstream ofsState("ping_pong_state.csv");
         if (ofsState.is_open()) {
             ofsState << ntact;
@@ -128,7 +128,7 @@ protected:
                 ofsState << ',' << z;
             ofsState << endl;
         }
-
+        */
 
         indxBall = (int)((vr_CurrentPhaseSpacePoint[0] + 0.5) / (1. / nSpatialZones));
         if (indxBall == nSpatialZones)
@@ -143,12 +143,13 @@ protected:
         indRacket = (int)((vr_CurrentPhaseSpacePoint[4] + 0.5) / (1. / nSpatialZones));
         if (indRacket == nSpatialZones)
             indRacket = nSpatialZones - 1;
-        vector<bool> vb_Spikes(nInputs, false);
-        vb_Spikes[indxBall] = vass_[indxBall].bFire();
-        vb_Spikes[nSpatialZones + indyBall] = vass_[nSpatialZones + indyBall].bFire();
-        vb_Spikes[nSpatialZones * 2 + indvxBall] = vass_[nSpatialZones * 2 + indvxBall].bFire();
-        vb_Spikes[nSpatialZones * 2 + nVelocityZones + indvyBall] = vass_[nSpatialZones * 2 + nVelocityZones + indvyBall].bFire();
-        vb_Spikes[nSpatialZones * 2 + nVelocityZones * 2 + indRacket] = vass_[nSpatialZones * 2 + nVelocityZones * 2 + indRacket].bFire();
+        vector<unsigned> vfl_(AfferentSpikeBufferSizeDW(nReceptors), 0);
+#define set_input_spike(ind) if (vass_[ind].bFire()) &vfl_.front() |= BitMaskAccess(ind)
+        set_input_spike(indxBall);
+        set_input_spike(nSpatialZones + indyBall);
+        set_input_spike(nSpatialZones * 2 + indvxBall);
+        set_input_spike(nSpatialZones * 2 + nVelocityZones + indvyBall);
+        set_input_spike(nSpatialZones * 2 + nVelocityZones * 2 + indRacket);
         int indxRel = (int)((vr_CurrentPhaseSpacePoint[0] + 0.5) / rRelPosStep);
         if (indxRel < nRelPos) {
             int indyRel = (int)((vr_CurrentPhaseSpacePoint[4] - vr_CurrentPhaseSpacePoint[1] + rRelPosStep / 2) / rRelPosStep);   // Raster goes from top (higher y) to bottom - in opposite
@@ -156,12 +157,8 @@ protected:
             if (abs(indyRel) <= (nRelPos - 1) / 2) {
                 indyRel += (nRelPos - 1) / 2;
                 indRaster = indyRel * nRelPos + indxRel;
-                vb_Spikes[nSpatialZones * 3 + nVelocityZones * 2 + indRaster] = vass_[nSpatialZones * 3 + nVelocityZones * 2 + indRaster].bFire();;
+                set_input_spike(nSpatialZones * 3 + nVelocityZones * 2 + indRaster);
             }
-        }
-        for (auto i: vb_Spikes) {
-            *prec = i;
-            prec += neuronstrsize;
         }
 
         return true;
@@ -256,17 +253,9 @@ protected:
     }
 public:
     Actions(): IReceptors(2) {}
-    virtual bool bGenerateReceptorSignals(char *prec, size_t neuronstrsize) override
+    virtual bool bGenerateSignals(unsigned *pfl) override
     {
-        if (rPastRY == BIGREALNUMBER || rPastRY == vr_CurrentPhaseSpacePoint[4])
-            prec[neuronstrsize] = prec[0] = 0;
-        else if (rPastRY > vr_CurrentPhaseSpacePoint[4]) {
-            prec[neuronstrsize] = 0;
-            prec[0] = 1;
-        } else {
-            prec[neuronstrsize] = 1;
-            prec[0] = 0;
-        }
+        *pfl = rPastRY == BIGREALNUMBER || rPastRY == vr_CurrentPhaseSpacePoint[4] ? 0 : rPastRY > vr_CurrentPhaseSpacePoint[4] ? 1 : 2;
         rPastRY = vr_CurrentPhaseSpacePoint[4];
         return true;
     }
