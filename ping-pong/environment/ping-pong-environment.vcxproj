@@ -163,7 +163,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="AdaptiveSpikeSource.hpp" />
-    <ClInclude Include="ClusterBayes.hpp" />
     <ClInclude Include="EnvironmentState.hpp" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="ping-pong-environment.h" />
@@ -171,7 +170,6 @@
   <ItemGroup>
     <ClCompile Include="..\..\pugixml-1.10\src\pugixml.cpp" />
     <ClCompile Include="AdaptiveSpikeSource.cpp" />
-    <ClCompile Include="ClusterBayes.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="EnvironmentState.cpp" />
     <ClCompile Include="ping-pong-environment-rea.cpp" />

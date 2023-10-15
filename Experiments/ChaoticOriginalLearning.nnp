@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SNN>
+	<Global>0</Global>
+	<Receptors name="Punishment" N="1">
+		<!--NOT USED NOW-->
+		<Implementation lib="ping-pong-environment"></Implementation>
+	</Receptors>
+	<Receptors name="Reward" N="1">
+		<Implementation lib="ping-pong-environment"></Implementation>
+	</Receptors>
+	<Receptors name="R" N="133">
+		<Implementation lib="ping-pong-environment"></Implementation>
+	</Receptors>
+	<Receptors name="Actions" N="2">
+		<Implementation lib="ping-pong-environment"></Implementation>
+	</Receptors>
+	<Receptors name="Poisson" N="2">
+		<Implementation lib="fromFile">
+			<args>
+				<Noise>$(SPONTANEOUSACTIVITY)</Noise>
+			</args>
+		</Implementation>
+	</Receptors>
+	<Network>
+		<Implementation lib="DyALA">
+			<args>
+				<NACTIONS>2</NACTIONS>
+				<INPUT>R</INPUT>
+				<REWARD>Reward</REWARD>
+				<ACTIONS>Actions</ACTIONS>
+				<NLEVELS>$(NLEVELS)</NLEVELS>
+				<LEVELDURATION>$(LEVELDURATION)</LEVELDURATION>
+				<NGROUPSONLEVEL0>$(NGROUPSONLEVEL0)</NGROUPSONLEVEL0>
+				<NNEURONSPERGROUP>1</NNEURONSPERGROUP>
+				<LEVELNGROUPMULTIPLIER>$(LEVELNGROUPMULTIPLIER)</LEVELNGROUPMULTIPLIER>
+				<LCHARTIME>$(LCHARTIME)</LCHARTIME>
+				<NSILENTSYNAPSES>$(NSILENTSYNAPSES)</NSILENTSYNAPSES>
+				<DW>$(DW)</DW>
+				<MINWEIGHT>$(MINWEIGHT)</MINWEIGHT>
+				<MAXWEIGHT>$(MAXWEIGHT)</MAXWEIGHT>
+				<STABILITYRESOURCECHANGERATIO>$(STABILITYRESOURCECHANGERATIO)</STABILITYRESOURCECHANGERATIO>
+				<MAXAFFERENTDELAY>$(MAXAFFERENTDELAY)</MAXAFFERENTDELAY>
+				<MAXISILEVELINDICATOR>$(MAXISILEVELINDICATOR)</MAXISILEVELINDICATOR>
+				<NNEURONSPERACTION>$(NNEURONSPERACTION)</NNEURONSPERACTION>
+				<LACTCHARTIME>$(LACTCHARTIME)</LACTCHARTIME>
+				<LDOPAMINEPLASTICITYTIME>$(LDOPAMINEPLASTICITYTIME)</LDOPAMINEPLASTICITYTIME>
+				<STABILITYRESOURCECHANGERATIOACT>$(STABILITYRESOURCECHANGERATIOACT)</STABILITYRESOURCECHANGERATIOACT>
+				<NACTSILENTSYNAPSES>$(NACTSILENTSYNAPSES)</NACTSILENTSYNAPSES>
+				<MINWEIGHTACT>$(MINWEIGHTACT)</MINWEIGHTACT>
+				<MAXWEIGHTACT>$(MAXWEIGHTACT)</MAXWEIGHTACT>
+				<!--MIGRATION-->
+				<MIGRATION></MIGRATION>
+				<!--/MIGRATION-->
+				<MAXACTISI>$(MAXACTISI)</MAXACTISI>
+				<DWACT>$(DWACT)</DWACT>
+				<MAXAFFERENTDELAYACT>$(MAXAFFERENTDELAYACT)</MAXAFFERENTDELAYACT>
+				<ACTIONPOWERLEVELFACTOR>$(ACTIONPOWERLEVELFACTOR)</ACTIONPOWERLEVELFACTOR>
+				<BASERPLASTICITY>$(BASERPLASTICITY)</BASERPLASTICITY>
+				<RPLASTICITYLEVELFACTOR>$(RPLASTICITYLEVELFACTOR)</RPLASTICITYLEVELFACTOR>
+			</args>
+		</Implementation>
+	</Network>
+	<Readout lib="ping-pong-environment">
+		<output>FINALGATEACT</output>
+		<args>
+			<start_time>1000000</start_time>
+		</args>
+	</Readout>
+	<!--<Verifyer lib="ping-pong-environment"></Verifyer>-->
+</SNN>
+`

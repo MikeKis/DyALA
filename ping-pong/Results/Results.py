@@ -8,17 +8,17 @@ import statistics
 import bisect
 import math
 
-file = "monitoring.10.csv"
-ReceptorSectionBoundaries = [1,2,6,10,144]   # It is assumed that first 4 sections are primary and secondary evaluation.
-indLA = [0, 70]
-SectionNames = ["L", "GATEREW", "GATEPUN", "GATEREWINT", "GATEPUNINT", "GATEACT", "GATELREW", "Blocker", "GATEBlocker", "GATEREWNoBlock", "GATEPUNNoBlock", "GATEREWBlock", "FINALGATEACT", "ACTREAL"]
+file = "monitoring.2.csv"
+ReceptorSectionBoundaries = [1,2,135]   # It is assumed that first 4 sections are primary and secondary evaluation.
+indLA = [616, 668]
+SectionNames = ["L", "REWGATE", "LevelMeasurement", "$$$Reward", "MEMLEVEL", "$$$Punishment", "LACT", "GATEREW", "GATEPUN", "GATEREWINT", "GATEPUNINT", "FINALGATEACT"]
 
 nActions = 2
 
 nSpatialZones = 30
 nVelocityZones = 9
 nRelPos = 5
-nPrimaryStateRecognizers = 10
+nPrimaryStateRecognizers = 298
 
 sec = []
 CharTime = []
@@ -196,8 +196,8 @@ while i <= len(lin):
                 else:
                     deffw_sum[strLink][-1] += abs(effw[i])
 
-                if  indLA[0] <= lin[i].neu < indLA[1] and lin[i].src >= ReceptorSectionBoundaries[3] and lin[i].src < ReceptorSectionBoundaries[4]:
-                    ind = lin[i].src - ReceptorSectionBoundaries[3]
+                if  indLA[0] <= lin[i].neu < indLA[1] and ReceptorSectionBoundaries[1] <= lin[i].src < ReceptorSectionBoundaries[2]:
+                    ind = lin[i].src - ReceptorSectionBoundaries[1]
                     if ind < nSpatialZones:
                         RecFieldA[-1][lin[i].neu - indLA[0]][0][ind] = lin[i].W
                     ind -= nSpatialZones

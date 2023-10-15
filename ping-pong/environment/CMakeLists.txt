@@ -8,13 +8,11 @@ add_library(${PROJECT_NAME} SHARED
   ping-pong-environment-rec.cpp
   ping-pong-environment-rea.cpp
   ping-pong-environment-ver.cpp
-  ClusterBayes.cpp
   UpdateWorld.cpp
   AdaptiveSpikeSource.cpp
   EnvironmentState.cpp
   ping-pong-environment.h
   EnvironmentState.hpp
-  ClusterBayes.hpp
   AdaptiveSpikeSource.hpp
   ../../pugixml-1.10/src/pugixml.cpp
 )

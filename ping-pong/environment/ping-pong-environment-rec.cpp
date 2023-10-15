@@ -14,7 +14,6 @@ Emulates ping-pong game.
 #include <sstream>
 #include <memory>
 
-#include "ClusterBayes.hpp"
 #include "EnvironmentState.hpp"
 #include "AdaptiveSpikeSource.hpp"
 
@@ -38,18 +37,6 @@ int nPunishments = 0;
 int nRewardsTot = 0;
 int nPunishmentsTot = 0;
 
-unique_ptr<ClusterBayes> cb;
-
-int CurrentLevel;
-bool bTargetState = false;
-int tactLevelFixed = -1000; // = never
-
-int PunishedLevel;   // used only in surrogate Bayes
-
-int NeuronTimeDepth = 10;    // P#1
-int LevelDuration;
-int LevelNeuronPeriod /* = LevelDuration / NeuronTimeDepth */;
-
 class DYNAMIC_LIBRARY_EXPORTED_CLASS Evaluator: public IReceptors
 {
 public:
@@ -57,10 +44,6 @@ public:
     {
         reward,
         punishment,
-
-        _debug_rewnorm,
-        _debug_punishment,
-        _level0
     };
 private:
     enum Evaluator::type typ;
@@ -70,20 +53,11 @@ private:
 protected:
     virtual void GetMeanings(VECTOR<STRING> &vstr_Meanings) const override
     {
-        if (typ == reward || typ == punishment) {
             vstr_Meanings.resize(1);
             vstr_Meanings.front() = typ == reward ? "REW" : "PUN";
-        } else {
-            vstr_Meanings.resize(nGoalLevels);
-            FORI(nGoalLevels) {
-                stringstream ss;
-                ss << (typ == _debug_rewnorm ? "$$$rewnorm" : "$$$punishment") << _i;
-                vstr_Meanings[_i] = ss.str();
             }
-        }
-    }
 public:
-    Evaluator(enum Evaluator::type t, size_t tactbeg = 0) : IReceptors(t == reward || t == punishment || t == _level0 ? 1 : nGoalLevels), typ(t) {}
+    Evaluator(enum Evaluator::type t, size_t tactbeg = 0) : IReceptors(1), typ(t) {}
     virtual bool bGenerateSignals(unsigned *pfl) override
     {
         switch (typ) {
@@ -101,34 +75,9 @@ public:
                                 if (ntact >= tactStart)
                                     ++nRewardsTot;
                                 ++nRewards;
-                                cb->FixReward();
-                                b_forVerifier_Reward = true;
                              }
                              break;
-            //case _debug_rewnorm: FORI(nGoalLevels)
-            //                        prec[_i * neuronstrsize] = 0;
-            //                     if (ntact >= tactLevelFixed + NeuronTimeDepth) {
-            //                         if (ntact == tactLevelFixed + NeuronTimeDepth) {
-            //                             int NewLevel = cb->Predict();
-            //                             if (NewLevel < CurrentLevel) {
-            //                                 prec[neuronstrsize * NewLevel] = 1;
-            //                                 PunishedLevel = -1;
-            //                             }
-            //                             else if (NewLevel == CurrentLevel)
-            //                                 PunishedLevel = -1;
-            //                             else PunishedLevel = CurrentLevel;
-            //                             CurrentLevel = NewLevel;
-            //                         } else if (!(ntact % NeuronTimeDepth))
-            //                             CurrentLevel = cb->Predict();
-            //                     }
-            //                     return true;
-            //case _debug_punishment: FORI(nGoalLevels)
-            //                            prec[_i * neuronstrsize] = 0;
-            //         if (ntact == tactLevelFixed + NeuronTimeDepth && PunishedLevel >= 0)
-            //             prec[neuronstrsize * PunishedLevel] = 1;
-            //                         return true;
-//            default: *prec = bTargetState && !(ntact % 3);
-//                return true;
+            default:         return true;
         }
         *pfl = 0;
         if (TrainCounter && !--PeriodCounter) {
@@ -170,6 +119,17 @@ protected:
 #define indRaster vind_[5]
 
         UpdateWorld(vr_CurrentPhaseSpacePoint);
+
+/*
+        static ofstream ofsState("ping_pong_state.csv");
+        if (ofsState.is_open()) {
+            ofsState << ntact;
+            for (auto z: vr_CurrentPhaseSpacePoint)
+                ofsState << ',' << z;
+            ofsState << endl;
+        }
+        */
+
         indxBall = (int)((vr_CurrentPhaseSpacePoint[0] + 0.5) / (1. / nSpatialZones));
         if (indxBall == nSpatialZones)
             indxBall = nSpatialZones - 1;
@@ -183,12 +143,13 @@ protected:
         indRacket = (int)((vr_CurrentPhaseSpacePoint[4] + 0.5) / (1. / nSpatialZones));
         if (indRacket == nSpatialZones)
             indRacket = nSpatialZones - 1;
-        vector<bool> vb_Spikes(nInputs, false);
-        vb_Spikes[indxBall] = vass_[indxBall].bFire();
-        vb_Spikes[nSpatialZones + indyBall] = vass_[nSpatialZones + indyBall].bFire();
-        vb_Spikes[nSpatialZones * 2 + indvxBall] = vass_[nSpatialZones * 2 + indvxBall].bFire();
-        vb_Spikes[nSpatialZones * 2 + nVelocityZones + indvyBall] = vass_[nSpatialZones * 2 + nVelocityZones + indvyBall].bFire();
-        vb_Spikes[nSpatialZones * 2 + nVelocityZones * 2 + indRacket] = vass_[nSpatialZones * 2 + nVelocityZones * 2 + indRacket].bFire();
+        vector<unsigned> vfl_(AfferentSpikeBufferSizeDW(nReceptors), 0);
+#define set_input_spike(ind) if (vass_[ind].bFire()) &vfl_.front() |= BitMaskAccess(ind)
+        set_input_spike(indxBall);
+        set_input_spike(nSpatialZones + indyBall);
+        set_input_spike(nSpatialZones * 2 + indvxBall);
+        set_input_spike(nSpatialZones * 2 + nVelocityZones + indvyBall);
+        set_input_spike(nSpatialZones * 2 + nVelocityZones * 2 + indRacket);
         int indxRel = (int)((vr_CurrentPhaseSpacePoint[0] + 0.5) / rRelPosStep);
         if (indxRel < nRelPos) {
             int indyRel = (int)((vr_CurrentPhaseSpacePoint[4] - vr_CurrentPhaseSpacePoint[1] + rRelPosStep / 2) / rRelPosStep);   // Raster goes from top (higher y) to bottom - in opposite
@@ -196,19 +157,10 @@ protected:
             if (abs(indyRel) <= (nRelPos - 1) / 2) {
                 indyRel += (nRelPos - 1) / 2;
                 indRaster = indyRel * nRelPos + indxRel;
-                vb_Spikes[nSpatialZones * 3 + nVelocityZones * 2 + indRaster] = vass_[nSpatialZones * 3 + nVelocityZones * 2 + indRaster].bFire();;
+                set_input_spike(nSpatialZones * 3 + nVelocityZones * 2 + indRaster);
             }
         }
-        BitMaskAccess bma;
-        vector<unsigned> vfl_(AfferentSpikeBufferSizeDW(nReceptors), 0);
-        for (auto i: vb_Spikes) {
-            if (i)
-                &vfl_.front() |= bma;
-            ++bma;
-        }
         copy(vfl_.begin(), vfl_.end(), pfl);
-
-        cb->AddNewInput(vb_Spikes);
 
         return true;
     }
@@ -261,7 +213,6 @@ public:
         sort(vr_samples.begin(), vr_samples.end());
         FORI((nVelocityZones - 1) / 2)
             vr_VelocityZoneBoundary[_i] = vr_samples[vr_samples.size() / 9 + _i * 2 * vr_samples.size() / 9];
-        cb.reset(new ClusterBayes);
 
     }
     virtual void Randomize(void) override {rng.Randomize();}
@@ -331,20 +282,11 @@ PING_PONG_ENVIRONMENT_EXPORT IReceptors *SetParametersIn(int &nReceptors, const 
 			    return new Evaluator(Evaluator::punishment);
 		case 1: nReceptors = 1;
 			    return new Evaluator(Evaluator::reward);
-
-  //      case 2: CurrentLevel = nGoalLevels = nReceptors;
-		//		return new Evaluator(Evaluator::_debug_rewnorm);
-		//case 3: nReceptors = nGoalLevels;
-		//	    return new Evaluator(Evaluator::_debug_punishment);
 		case 2: nReceptors = nInputs;
 			    return new rec_ping_pong;
-
-//		case 5: nReceptors = 1;
-//			    return new Evaluator(Evaluator::_level0);
-
         case 3: nReceptors = 2;
                 return new Actions;
-        default: cout << "Too many calls of SetParametersIn\n";
+        default: cout << "ping-pong -- Too many calls of SetParametersIn\n";
 				exit(-1);
 	}
 }

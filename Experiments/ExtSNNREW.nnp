@@ -8,22 +8,23 @@
   <Receptors name="Reward" N="1">
     <Implementation lib="ping-pong-environment"></Implementation>
   </Receptors>
-  <Receptors name="$$$Reward" N="4">
-    <Implementation lib="ping-pong-environment"></Implementation>
-  </Receptors>
-  <Receptors name="$$$Punishment" N="4">
-    <Implementation lib="ping-pong-environment"></Implementation>
-  </Receptors>
   <Receptors name="R" N="133">
-    <Implementation lib="ping-pong-environment"></Implementation>
-  </Receptors>
-  <Receptors name="LEV0" N="1">
     <Implementation lib="ping-pong-environment"></Implementation>
   </Receptors>
   <Receptors name="Actions" N="2">
     <Implementation lib="ping-pong-environment"></Implementation>
   </Receptors>
   <Network>
+    <Implementation lib="NetworkLoader">
+      <args Saved="FuzzyREWRL.nns"></args>
+    </Implementation>
+    <Implementation lib="dynval">
+      <args>
+        <INPUT>L</INPUT>
+	<OUTPOS>$$$Reward</OUTPOS>
+	<OUTNEG>$$$Punishment</OUTNEG>
+      </args>
+    </Implementation>
     <Implementation lib="DyALA">
       <args>
         <NACTIONS>2</NACTIONS>
@@ -44,20 +45,7 @@
 	<MAXWEIGHT>$(MAXWEIGHT)</MAXWEIGHT>
 	<STABILITYRESOURCECHANGERATIO>$(STABILITYRESOURCECHANGERATIO)</STABILITYRESOURCECHANGERATIO>
 	<NSILENTSYNAPSES>$(NSILENTINPUTS)</NSILENTSYNAPSES>
-        <NPRIMARYSTATERECOGNIZERS>10</NPRIMARYSTATERECOGNIZERS>
-
-
-	<NBLOCKERNEURONSPERACTION>$(NBLOCKERNEURONSPERACTION)</NBLOCKERNEURONSPERACTION>
-	<BLOCKERCHARTIME>$(BLOCKERCHARTIME)</BLOCKERCHARTIME>
-	<BLOCKERDW>$(BLOCKERDW)</BLOCKERDW> 
 	<LLATERALBLOCKINGTIME>$(LLATERALBLOCKINGTIME)</LLATERALBLOCKINGTIME>
-	<BLOCKTIME>$(BLOCKTIME)</BLOCKTIME>
-	<BLOCKERWEIGHTRELATIVEPUNISHMENT>$(BLOCKERWEIGHTRELATIVEPUNISHMENT)</BLOCKERWEIGHTRELATIVEPUNISHMENT>
-	<BLOCKERDOPAMINEPLASTICITYTIME>$(BLOCKERDOPAMINEPLASTICITYTIME)</BLOCKERDOPAMINEPLASTICITYTIME>
-	<MAXWEIGHTBLOCKER>$(MAXWEIGHTBLOCKER)</MAXWEIGHTBLOCKER>
-	<SPARCITYBLOCKER>$(SPARCITYBLOCKER)</SPARCITYBLOCKER>
-
-
       </args>
     </Implementation>
   </Network>
@@ -65,13 +53,8 @@
     <output>FINALGATEACT</output>
     <args>
       <start_time>1000000</start_time> 
-
-      <NeuronTimeDepth>$(NEURONTIMEDEPTH)</NeuronTimeDepth>
-      <rNSpikesperNeuronTime>$(NSPIKESPERNEURONTIME)</rNSpikesperNeuronTime>
-      <LevelDuration>$(LEVELDURATION)</LevelDuration>
-      <minnSignificantExtraSpikes>$(MINNSIGNIFICANTEXTRASPIKES)</minnSignificantExtraSpikes>
-
     </args>
    </Readout>
   <Verifyer lib="ping-pong-environment"></Verifyer>
 </SNN>  
+`
