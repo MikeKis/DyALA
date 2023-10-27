@@ -127,14 +127,13 @@ double devaluate(int ind, const VECTOR<PAIR<float,VECTOR<PAIR<int,bool> > > > &v
 			ofsTaskLog << "ind" << ind << " - " << EMULATOR << " started at " << boost::posix_time::second_clock::local_time() << std::endl;
 			mutLog.unlock();
 			sprintf(buf + 300, "-T%d", MAXEMULATIONTIME);
-			vstr_argsEmulator.resize(7);
+			vstr_argsEmulator.resize(6);
 			vstr_argsEmulator[0] = ".." FOLDER_SEPARATOR "Experiments";
 			vstr_argsEmulator[1] = buf;
 			vstr_argsEmulator[2] = buf + 300;
-			vstr_argsEmulator[3] = "-S100000";
+			vstr_argsEmulator[3] = "-D100000";
 			vstr_argsEmulator[4] = "-R";
 			vstr_argsEmulator[5] = "-dS30000";
-			vstr_argsEmulator[6] = "-D100000";
 #ifndef USE_CPU
 			sprintf(buf + 100, "-C%d", SelectedDevice);
 			vstr_argsEmulator.push_back(buf + 100);

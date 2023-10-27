@@ -7,7 +7,7 @@
     <StartupFile>Results.py</StartupFile>
     <SearchPath>
     </SearchPath>
-    <WorkingDirectory>C:\E\DyALA\Workplace</WorkingDirectory>
+    <WorkingDirectory>E:\DyALA\Workplace</WorkingDirectory>
     <OutputPath>.</OutputPath>
     <Name>Results</Name>
     <RootNamespace>Results</RootNamespace>
