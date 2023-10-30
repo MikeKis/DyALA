@@ -48,7 +48,6 @@ PING_PONG_ENVIRONMENT_EXPORT void ObtainSpikes(const vector<int> &v_Firing, stri
 		PostRewardCounter = RewardTrainLength * RewardTrainPeriod;
 		b_forVerifier_Reward = false;
 	}
-	++ntact;
 	if (PostRewardCounter)
 		--PostRewardCounter;
 }
