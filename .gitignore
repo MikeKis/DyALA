@@ -1,0 +1,6 @@
+*.bin
+/Workplace/
+/build/
+/pugixml-1.10/
+*.nnc
+*.so
