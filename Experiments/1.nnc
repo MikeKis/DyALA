@@ -1,58 +1,68 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf - 8"?>
 <SNN>
-  <Global>0</Global>
-  <Global>0.578568</Global>
-  <Global>0.0317279</Global>
-  <Receptors name="Punishment" N="1">
-    <!--NOT USED NOW-->
-    <Implementation lib="ping-pong-environment"></Implementation>
-  </Receptors>
-  <Receptors name="Reward" N="1">
-    <Implementation lib="ping-pong-environment"></Implementation>
-  </Receptors>
-  <Receptors name="$$$Reward" N="4">
-    <Implementation lib="ping-pong-environment"></Implementation>
-  </Receptors>
-  <Receptors name="$$$Punishment" N="4">
-    <Implementation lib="ping-pong-environment"></Implementation>
-  </Receptors>
-  <Receptors name="R" N="133">
-    <Implementation lib="ping-pong-environment"></Implementation>
-  </Receptors>
-  <Network>
-    <Implementation lib="DyALA">
-      <args>
-        <NACTIONS>2</NACTIONS>
-	<NNEURONSPERACTION>4</NNEURONSPERACTION>
-	<LCHARTIME>2</LCHARTIME>
-	<LTHRESHOLDDECAYPERIOD>347</LTHRESHOLDDECAYPERIOD>
-	<LTHRESHOLDINC>39</LTHRESHOLDINC>
-	<LPLASTICITYTIME>2</LPLASTICITYTIME>
-	<LDOPAMINEPLASTICITYTIME>78</LDOPAMINEPLASTICITYTIME>
-<!--MIGRATION-->
-    	<MIGRATION></MIGRATION>
-<!--/MIGRATION-->
-	<ACTIVATIONTIME>23</ACTIVATIONTIME>
-	<WEIGHTCHANGE>0.0308798</WEIGHTCHANGE>
-	<WEIGHTRELATIVEPUNISHMENT>11.3119</WEIGHTRELATIVEPUNISHMENT>
-	<MAXWEIGHT>1.12169</MAXWEIGHT>
-	<DEFW>0.400862</DEFW>
-	<SPARCITY>0.800404</SPARCITY>
-        <NPRIMARYSTATERECOGNIZERS>10</NPRIMARYSTATERECOGNIZERS>
-      </args>
-    </Implementation>
-  </Network>
-   <Readout lib="ping-pong-environment">
-    <output>L</output>
-    <args>
-      <start_time>1000000</start_time> 
-
-      <NeuronTimeDepth>18</NeuronTimeDepth>
-      <rNSpikesperNeuronTime>2</rNSpikesperNeuronTime>
-      <LevelDuration>49</LevelDuration>
-      <minnSignificantExtraSpikes>22</minnSignificantExtraSpikes>
-
-    </args>
-   </Readout>
-  <Verifyer lib="ping-pong-environment"></Verifyer>
-</SNN>  
+	<Global>0</Global>
+	<Receptors name="Punishment" N="1">
+		<!--NOT USED NOW-->
+		<Implementation lib="ping-pong-environment"></Implementation>
+	</Receptors>
+	<Receptors name="Reward" N="1">
+		<Implementation lib="ping-pong-environment"></Implementation>
+	</Receptors>
+	<Receptors name="R" N="133">
+		<Implementation lib="ping-pong-environment"></Implementation>
+	</Receptors>
+	<Receptors name="Actions" N="2">
+		<Implementation lib="ping-pong-environment"></Implementation>
+	</Receptors>
+	<Receptors name="Poisson" N="2">
+		<Implementation lib="fromFile">
+			<args>
+				<Noise>0.0607298</Noise>
+			</args>
+		</Implementation>
+	</Receptors>
+	<Network>
+		<Implementation lib="DyALA">
+			<args>
+				<NACTIONS>2</NACTIONS>
+				<INPUT>R</INPUT>
+				<REWARD>Reward</REWARD>
+				<ACTIONS>Actions</ACTIONS>
+				<NLEVELS>7</NLEVELS>
+				<LEVELDURATION>52</LEVELDURATION>
+				<NGROUPSONLEVEL0>10</NGROUPSONLEVEL0>
+				<NNEURONSPERGROUP>1</NNEURONSPERGROUP>
+				<LEVELNGROUPMULTIPLIER>1</LEVELNGROUPMULTIPLIER>
+				<LCHARTIME>5</LCHARTIME>
+				<NSILENTSYNAPSES>9</NSILENTSYNAPSES>
+				<DW>0.952527</DW>
+				<MINWEIGHT>0.0400588</MINWEIGHT>
+				<MAXWEIGHT>11.545</MAXWEIGHT>
+				<STABILITYRESOURCECHANGERATIO>0.0769655</STABILITYRESOURCECHANGERATIO>
+				<MAXAFFERENTDELAY>3</MAXAFFERENTDELAY>
+				<MAXISILEVELINDICATOR>6</MAXISILEVELINDICATOR>
+				<NNEURONSPERACTION>1</NNEURONSPERACTION>
+				<LACTCHARTIME>9</LACTCHARTIME>
+				<LDOPAMINEPLASTICITYTIME>13</LDOPAMINEPLASTICITYTIME>
+				<STABILITYRESOURCECHANGERATIOACT>1.35319</STABILITYRESOURCECHANGERATIOACT>
+				<NACTSILENTSYNAPSES>3</NACTSILENTSYNAPSES>
+				<MINWEIGHTACT>0</MINWEIGHTACT>
+				<MAXWEIGHTACT>12.7498</MAXWEIGHTACT>
+				
+				<MAXACTISI>12</MAXACTISI>
+				<DWACT>0.148381</DWACT>
+				<MAXAFFERENTDELAYACT>2</MAXAFFERENTDELAYACT>
+				<ACTIONPOWERLEVELFACTOR>1.63784</ACTIONPOWERLEVELFACTOR>
+				<BASERPLASTICITY>1.60772</BASERPLASTICITY>
+				<RPLASTICITYLEVELFACTOR>0.804408</RPLASTICITYLEVELFACTOR>
+			</args>
+		</Implementation>
+	</Network>
+	<Readout lib="ping-pong-environment">
+		<output>ACTREP</output>
+		<args>
+			<start_time>1000000</start_time>
+		</args>
+	</Readout>
+	<!--<Verifyer lib="ping-pong-environment"></Verifyer>-->
+</SNN>

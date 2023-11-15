@@ -2,8 +2,10 @@
 
 #include <random>
 
+#ifdef PINGPONGENVIRONMENT_EXPORTS
 #include <sg/sg.h>
 #include <NetworkConfigurator.h>
+#endif
 
 #define ENVIRONMENT_STATE_SHARED_MEMORY_NAME "ping-pong-environment.sm"
 
