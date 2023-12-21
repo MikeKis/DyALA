@@ -31,10 +31,10 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 # Compile definitions
 ################################################################################
 target_compile_definitions(${PROJECT_NAME} PRIVATE
-    "FOR_LINUX;"
-    "NDEBUG;"
-    "_USRDLL;"
-    "PING_PONG_ENVIRONMENT_EXPORTS"
+    "FOR_LINUX"
+    "NDEBUG"
+    "_USRDLL"
+    "PINGPONGENVIRONMENT_EXPORTS"
 )
 
 target_compile_options(${PROJECT_NAME} PRIVATE
