@@ -1,27 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <SNN>
 	<Global>0</Global>
-	<Receptors name="Punishment" N="1">
+	<RECEPTORS name="Punishment" n="1">
 		<!--NOT USED NOW-->
 		<Implementation lib="ping-pong-environment"></Implementation>
-	</Receptors>
-	<Receptors name="Reward" N="1">
+	</RECEPTORS>
+	<RECEPTORS name="Reward" n="1">
 		<Implementation lib="ping-pong-environment"></Implementation>
-	</Receptors>
-	<Receptors name="R" N="133">
+	</RECEPTORS>
+	<RECEPTORS name="R" n="133">
 		<Implementation lib="ping-pong-environment"></Implementation>
-	</Receptors>
-	<Receptors name="Actions" N="2">
+	</RECEPTORS>
+	<RECEPTORS name="Actions" n="2">
 		<Implementation lib="ping-pong-environment"></Implementation>
-	</Receptors>
-	<Receptors name="Poisson" N="2">
+	</RECEPTORS>
+	<RECEPTORS name="Poisson" n="2">
 		<Implementation lib="fromFile">
 			<args>
-				<Noise>$(SPONTANEOUSACTIVITY)</Noise>
+				<noise>$(SPONTANEOUSACTIVITY)</noise>
+				<history_length>2000000</history_length>
 			</args>
 		</Implementation>
-	</Receptors>
-	<Network>
+	</RECEPTORS>
+	<NETWORK>
 		<Implementation lib="DyALA">
 			<args>
 				<NACTIONS>2</NACTIONS>
@@ -59,7 +60,7 @@
 				<RPLASTICITYLEVELFACTOR>$(RPLASTICITYLEVELFACTOR)</RPLASTICITYLEVELFACTOR>
 			</args>
 		</Implementation>
-	</Network>
+	</NETWORK>
 	<Readout lib="ping-pong-environment">
 		<output>ACTREP</output>
 		<args>
