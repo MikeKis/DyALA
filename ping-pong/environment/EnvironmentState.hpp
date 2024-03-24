@@ -35,6 +35,7 @@ public:
         } else pprr_Ball = &pprrr_LocalState.first;
     }
     void ResetBall(bool bPunishment = true);
+    void ResetRacket();
 };
 
 #endif // ENVIRONMENTSTATE_HPP

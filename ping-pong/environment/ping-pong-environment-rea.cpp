@@ -26,7 +26,7 @@ extern int PostRewardCounter;
 extern int nRecognitions;
 extern int nCorr;
 
-int nNeuronsperAction;
+int nNeuronsperAction = 0;
 
 PING_PONG_ENVIRONMENT_EXPORT void SetParametersOut(int ExperimentId, size_t tactTermination, unsigned nOutputNeurons, const pugi::xml_node &xn) 
 {
