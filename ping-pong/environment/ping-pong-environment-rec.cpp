@@ -29,7 +29,7 @@ extern bool b_forVerifier_Reward;
 
 int nGoalLevels;
 
-int ntact = 0;
+int ntact = -1;
 int tactStart;
 
 int nRewards = 0;
@@ -120,9 +120,10 @@ protected:
 #define indRacket vind_[4]
 #define indRaster vind_[5]
 
+        ++ntact;
         UpdateWorld(vr_CurrentPhaseSpacePoint);
 
-/*
+
         static ofstream ofsState("ping_pong_state.csv");
         if (ofsState.is_open()) {
             ofsState << ntact;
@@ -130,7 +131,6 @@ protected:
                 ofsState << ',' << z;
             ofsState << endl;
         }
-        */
 
         indxBall = (int)((vr_CurrentPhaseSpacePoint[0] + 0.5) / (1. / nSpatialZones));
         if (indxBall == nSpatialZones)

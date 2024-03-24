@@ -8,8 +8,8 @@ extern int nNeuronsperAction;
 
 extern pair<float, float> prr_BallSpeed;
 
-const unsigned minSpotPassageTime_ms = 300;
-const unsigned maxSpotPassageTime_ms = 1000;
+const unsigned minSpotPassageTime_ms = 200;
+const unsigned maxSpotPassageTime_ms = 700;
 
 EnvironmentState es;
 RandomNumberGenerator rng;
