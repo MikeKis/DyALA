@@ -11,7 +11,7 @@ void UpdateWorld(vector<float> &vr_PhaseSpacePoint)
 {
     if (!es.prRacket) {
         es.prRacket = &((pair<pair<float, float>, float> *)es.pprr_Ball)->second;
-        *es.prRacket = (float)(-0.5 + rng());
+        es.ResetRacket();
         es.ResetBall();
     }
 

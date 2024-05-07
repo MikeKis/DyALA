@@ -26,7 +26,7 @@ extern int PostRewardCounter;
 extern int nRecognitions;
 extern int nCorr;
 
-int nNeuronsperAction;
+int nNeuronsperAction = 0;
 
 PING_PONG_ENVIRONMENT_EXPORT void SetParametersOut(int ExperimentId, size_t tactTermination, unsigned nOutputNeurons, const pugi::xml_node &xn) 
 {
@@ -39,7 +39,6 @@ const float rAction = 1.F / nSpatialZones;
 PING_PONG_ENVIRONMENT_EXPORT bool ObtainOutputSpikes(const vector<int> &v_Firing, int nEquilibriumPeriods)
 {
 	static int NoMoveTacts = 0;
-	++ntact;
 	int nCommandsDown = count_if(v_Firing.begin(), v_Firing.end(), bind2nd(less<int>(), nNeuronsperAction));
 	auto r = rAction * ((int)v_Firing.size() - 2 * nCommandsDown);
 	auto rsav = *es.prRacket;
