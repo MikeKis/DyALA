@@ -36,6 +36,7 @@ int nRewards = 0;
 int nPunishments = 0;
 int nRewardsTot = 0;
 int nPunishmentsTot = 0;
+int InputBlockCounter = 0;
 
 class DYNAMIC_LIBRARY_EXPORTED_CLASS Evaluator: public IReceptors
 {
@@ -84,6 +85,7 @@ public:
             *pfl = 1;
             PeriodCounter = RewardTrainPeriod;
             --TrainCounter;
+            InputBlockCounter = afterRewardSilence;
         }
         return true;
     }
@@ -144,21 +146,24 @@ protected:
         if (indRacket == nSpatialZones)
             indRacket = nSpatialZones - 1;
         vector<unsigned> vfl_(AfferentSpikeBufferSizeDW(nReceptors), 0);
+        if (InputBlockCounter) {
 #define set_input_spike(ind) if (vass_[ind].bFire()) &vfl_.front() |= BitMaskAccess(ind)
-        set_input_spike(indxBall);
-        set_input_spike(nSpatialZones + indyBall);
-        set_input_spike(nSpatialZones * 2 + indvxBall);
-        set_input_spike(nSpatialZones * 2 + nVelocityZones + indvyBall);
-        set_input_spike(nSpatialZones * 2 + nVelocityZones * 2 + indRacket);
-        int indxRel = (int)((vr_CurrentPhaseSpacePoint[0] + 0.5) / rRelPosStep);
-        if (indxRel < nRelPos) {
-            int indyRel = (int)((vr_CurrentPhaseSpacePoint[4] - vr_CurrentPhaseSpacePoint[1] + rRelPosStep / 2) / rRelPosStep);   // Raster goes from top (higher y) to bottom - in opposite
-                                                                 // direction to y axis
-            if (abs(indyRel) <= (nRelPos - 1) / 2) {
-                indyRel += (nRelPos - 1) / 2;
-                indRaster = indyRel * nRelPos + indxRel;
-                set_input_spike(nSpatialZones * 3 + nVelocityZones * 2 + indRaster);
+            set_input_spike(indxBall);
+            set_input_spike(nSpatialZones + indyBall);
+            set_input_spike(nSpatialZones * 2 + indvxBall);
+            set_input_spike(nSpatialZones * 2 + nVelocityZones + indvyBall);
+            set_input_spike(nSpatialZones * 2 + nVelocityZones * 2 + indRacket);
+            int indxRel = (int)((vr_CurrentPhaseSpacePoint[0] + 0.5) / rRelPosStep);
+            if (indxRel < nRelPos) {
+                int indyRel = (int)((vr_CurrentPhaseSpacePoint[4] - vr_CurrentPhaseSpacePoint[1] + rRelPosStep / 2) / rRelPosStep);   // Raster goes from top (higher y) to bottom - in opposite
+                // direction to y axis
+                if (abs(indyRel) <= (nRelPos - 1) / 2) {
+                    indyRel += (nRelPos - 1) / 2;
+                    indRaster = indyRel * nRelPos + indxRel;
+                    set_input_spike(nSpatialZones * 3 + nVelocityZones * 2 + indRaster);
+                }
             }
+            --InputBlockCounter;
         }
         copy(vfl_.begin(), vfl_.end(), pfl);
 
