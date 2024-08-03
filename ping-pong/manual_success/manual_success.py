@@ -13,7 +13,11 @@ import random
 spike_file = "inpstatic.txt"
 target_file = "rewstastates.txt"
 ntactsperstate = 10
-nlearningstates = 120000
+
+# These are in states - not in tacts!
+
+best_learning_time = 140000
+prediction_depth = 3 * 2 ** np.arange(6)   
 
 nVelocityZones = 9
 nSpatialZones = 30
@@ -104,24 +108,28 @@ for i in range(len(X)):
         n += X[i][ind]
         ind += 1
     vx = d / n if n > 0 else 0
-    d = 0
-    n = 0;
-    for ivy in range(nVelocityZones):
-        d += X[i][ind] * (0 if ivy == nVelocityZones // 2 else -vr_VelocityZoneMedian[nVelocityZones // 2 - ivy - 1] if ivy < nVelocityZones // 2 else vr_VelocityZoneMedian[ivy - nVelocityZones // 2 - 1])
-        n += X[i][ind]
-        ind += 1
-    vy = d / n if n > 0 else 0
-    d = 0
-    ry = -0.5 + 0.5 / nSpatialZones
-    n = 0;
-    for indx in range(nSpatialZones):
-        d += X[i][ind] * ry
-        n += X[i][ind]
-        ry += 1 / nSpatialZones
-        ind += 1
-    ry = d / n if n > 0 else -1
-    dx = x + 0.5
-    if vx < 0 and x < 0:
+    if vx != 0:
+        d = 0
+        n = 0;
+        for ivy in range(nVelocityZones):
+            d += X[i][ind] * (0 if ivy == nVelocityZones // 2 else -vr_VelocityZoneMedian[nVelocityZones // 2 - ivy - 1] if ivy < nVelocityZones // 2 else vr_VelocityZoneMedian[ivy - nVelocityZones // 2 - 1])
+            n += X[i][ind]
+            ind += 1
+        vy = d / n if n > 0 else 0
+        d = 0
+        ry = -0.5 + 0.5 / nSpatialZones
+        n = 0;
+        for indx in range(nSpatialZones):
+            d += X[i][ind] * ry
+            n += X[i][ind]
+            ry += 1 / nSpatialZones
+            ind += 1
+        ry = d / n if n > 0 else -1
+        if vx > 0:
+            y += (0.5 - x) * vy / vx
+            x = 0.5
+            vx = -vx
+        dx = x + 0.5
         yint = y - dx * vy / vx + 0.5
         yint -= np.floor(yint / 2) * 2
         ry += 0.5
@@ -138,6 +146,8 @@ for i in range(len(X)):
 real = 0
 predicted = 0
 correcty_predicted = 0
+nerr = 0
+ntot = 0
 for i in range(len(X)):
     if Y[i] > 0:
         if Y[i] == 2:    
@@ -146,10 +156,14 @@ for i in range(len(X)):
             predicted += 1
             if Y[i] == 2:
                 correcty_predicted += 1
+        if manual_pred[i] != Y[i] - 1:
+            nerr += 1
+        ntot += 1
 rPrecision = correcty_predicted / predicted if predicted > 0 else  0.
 rRecall = correcty_predicted / real if real > 0 else 0.
 F =  2 / (1 / rPrecision + 1 / rRecall) if rPrecision * rRecall > 0 else 0.
-print("THEORETICAL: Precision=", rPrecision, " Recall=", rRecall, " F=", F)
+rError = nerr / ntot
+print("THEORETICAL: Error=", rError, " Precision=", rPrecision, " Recall=", rRecall, " F=", F)
 
 ########################################################################################
     
@@ -177,6 +191,7 @@ def cla(learning_time):
     real = 0
     predicted = 0
     correcty_predicted = 0
+    nerr = 0
     for i in range(len(yy)):
         p = int(pred[i])
         if yy[i] == 1:
@@ -185,21 +200,127 @@ def cla(learning_time):
             predicted += 1
             if p == yy[i]:
                 correcty_predicted += 1
+        if p != yy[i]:
+            nerr += 1
     rPrecision = correcty_predicted / predicted if predicted > 0 else  0.
     rRecall = correcty_predicted / real if real > 0 else 0.
     F =  2 / (1 / rPrecision + 1 / rRecall) if rPrecision * rRecall > 0 else 0.
+    rError = nerr / len(yy)
     print("done ", learning_time)
-    return rPrecision, rRecall, F
+    return rError, rPrecision, rRecall, F
 
 pre = np.zeros(9)
 rec = np.zeros(9)
 f = np.zeros(9)
+err = np.zeros(9)
 tacts = range(20000, 200000, 20000)
-res = []
 for i in range(len(tacts)):
-    pre[i], rec[i], f[i] = cla(tacts[i])  
+    err[i], pre[i], rec[i], f[i] = cla(tacts[i])  
 fig, ax = plt.subplots()
 ax.plot(tacts, pre, color = "red")
 ax.plot(tacts, rec, color = "green")
 ax.plot(tacts, f, color = "blue")
+ax.plot(tacts, err, color = "black")
+plt.show()
+
+def thecla(predep):
+    real = 0
+    predicted = 0
+    correcty_predicted = 0
+    nerr = 0
+    ntot = 0
+    next_bounce = 10000000000
+    i = len(X) - 1
+    while i >= 0:
+        if Y[i] > 0:
+            if next_bounce - i <= predep:
+                if Y[i] == 2:    
+                    real += 1
+                if manual_pred[i] == 1:
+                    predicted += 1
+                    if Y[i] == 2:
+                        correcty_predicted += 1
+                if manual_pred[i] != Y[i] - 1:
+                    nerr += 1
+                ntot += 1
+        else:
+            next_bounce = i
+        i -= 1
+    rPrecision = correcty_predicted / predicted if predicted > 0 else  0.
+    rRecall = correcty_predicted / real if real > 0 else 0.
+    F =  2 / (1 / rPrecision + 1 / rRecall) if rPrecision * rRecall > 0 else 0.
+    rError = nerr / ntot
+    return rError, rPrecision, rRecall, F
+
+pre = np.zeros(len(prediction_depth))
+rec = np.zeros(len(prediction_depth))
+f = np.zeros(len(prediction_depth))
+err = np.zeros(len(prediction_depth))
+for i in range(len(prediction_depth)):
+    err[i], pre[i], rec[i], f[i] = thecla(prediction_depth[i])  
+fig, ax = plt.subplots()
+ax.plot(prediction_depth, pre, color = "red")
+ax.plot(prediction_depth, rec, color = "green")
+ax.plot(prediction_depth, f, color = "blue")
+ax.plot(prediction_depth, err, color = "black")
+ax.set_xscale('log')
+plt.show()
+
+def RFcla(predep):
+    next_bounce = 10000000000
+    Xtest = []
+    Ytest = []
+    i = len(X) - 1
+    while i >= best_learning_time:
+        if Y[i] > 0:
+            if next_bounce - i <= predep:
+                Ytest.append(Y[i] - 1)
+                Xtest.append(X[i])
+        else:
+            next_bounce = i
+        i -= 1
+    Xtrain = []
+    Ytrain = []
+    while i >= 0:
+        if Y[i] > 0:
+            if next_bounce - i <= predep:
+                Ytrain.append(Y[i] - 1)
+                Xtrain.append(X[i])
+        else:
+            next_bounce = i
+        i -= 1
+    clf.fit(Xtrain, Ytrain)
+    pred = clf.predict(Xtest)
+    real = 0
+    predicted = 0
+    correcty_predicted = 0
+    nerr = 0
+    for i in range(len(Ytest)):
+        p = int(pred[i])
+        if Ytest[i] == 1:
+            real += 1
+        if p == 1:
+            predicted += 1
+            if p == Ytest[i]:
+                correcty_predicted += 1
+        if p != Ytest[i]:
+            nerr += 1
+    rPrecision = correcty_predicted / predicted if predicted > 0 else  0.
+    rRecall = correcty_predicted / real if real > 0 else 0.
+    F =  2 / (1 / rPrecision + 1 / rRecall) if rPrecision * rRecall > 0 else 0.
+    rError = nerr / len(Ytest)
+    return rError, rPrecision, rRecall, F
+
+pre = np.zeros(len(prediction_depth))
+rec = np.zeros(len(prediction_depth))
+f = np.zeros(len(prediction_depth))
+err = np.zeros(len(prediction_depth))
+for i in range(len(prediction_depth)):
+    err[i], pre[i], rec[i], f[i] = RFcla(prediction_depth[i])  
+fig, ax = plt.subplots()
+ax.plot(prediction_depth, pre, color = "red")
+ax.plot(prediction_depth, rec, color = "green")
+ax.plot(prediction_depth, f, color = "blue")
+ax.plot(prediction_depth, err, color = "black")
+ax.set_xscale('log')
 plt.show()

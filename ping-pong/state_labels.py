@@ -17,16 +17,19 @@ punishments = []
 labels = []
 with open(state_file, newline = '') as filsta:
     csr = csv.reader(filsta)
+    last_bounce = -1000000
     bounced = False
     for row in csr:
         tact = int(row[0])
         x = float(row[1])
         if bounced:
-            if x == 0.:
-                labels[max(0, len(labels) - period_duration):] = [1] * min(period_duration, len(labels))  
-            else:  
-                labels[max(0, len(labels) - period_duration):] = [2] * min(period_duration, len(labels))  
-        labels.append(0)     
+            fill = 1 if x == 0. else 2
+            i = len(labels) - 1
+            while i >= max(0, last_bounce + state_duration * 2):
+                labels[i] = fill
+                i -= 1
+            last_bounce = len(labels)
+        labels.append(0)  
         bounced = x <= -0.5
             
 with open(label_file, "wt") as filout:
