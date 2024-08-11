@@ -120,7 +120,7 @@ protected:
 
         UpdateWorld(vr_CurrentPhaseSpacePoint);
 
-/*
+
         static ofstream ofsState("ping_pong_state.csv");
         if (ofsState.is_open()) {
             ofsState << ntact;
@@ -128,7 +128,7 @@ protected:
                 ofsState << ',' << z;
             ofsState << endl;
         }
-        */
+
 
         indxBall = (int)((vr_CurrentPhaseSpacePoint[0] + 0.5) / (1. / nSpatialZones));
         if (indxBall == nSpatialZones)
