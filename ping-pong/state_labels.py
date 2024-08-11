@@ -6,7 +6,7 @@ Created on Wed Apr  3 17:04:20 2024
 @author: mikhail
 """
 
-period_duration = [72, 97, 131]
+period_duration = [100, 130, 200]
 reward_file = "rewstatic.txt"
 state_file = "rewstastates.txt"
 state_duration = 10
