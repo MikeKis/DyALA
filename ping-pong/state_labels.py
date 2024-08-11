@@ -5,37 +5,37 @@ Created on Wed Apr  3 17:04:20 2024
 
 @author: mikhail
 """
+import csv
 
-period_duration = [100, 130, 200]
-reward_file = "rewstatic.txt"
-state_file = "rewstastates.txt"
+period_duration = 300
+state_file = "ping_pong_state.csv"
+label_file = "rewstastates.txt"
 state_duration = 10
 
-perbeg = [sum(period_duration[:i+1]) for i in range(len(period_duration))]
+rewards = []
+punishments = []
+labels = []
+with open(state_file, newline = '') as filsta:
+    csr = csv.reader(filsta)
+    bounced = False
+    for row in csr:
+        tact = int(row[0])
+        x = float(row[1])
+        if bounced:
+            if x == 0.:
+                labels[max(0, len(labels) - period_duration):] = [1] * min(period_duration, len(labels))  
+            else:  
+                labels[max(0, len(labels) - period_duration):] = [2] * min(period_duration, len(labels))  
+        labels.append(0)     
+        bounced = x <= -0.5
 
-with open(reward_file, "rt") as filpro:
-    pro = filpro.readlines()
-    rewards = [i for i,x in enumerate(pro) if x[0] == '@']
-    state_beg = []
-    for i in rewards:
-        for j in range(len(perbeg)):
-            state_beg.append([i - perbeg[-j - 1], j])
-            
-with open(state_file, "wt") as filstate:
+with open(label_file, "wt") as filout:
     js = 0
     jr = 0
     current_state = -1
-    for i in range(0, len(pro), state_duration):
-        if js < len(state_beg) and i + state_duration / 2 >= state_beg[js][0]:
-            current_state = state_beg[js][1]
-            js += 1
-        elif jr < len(rewards) and  i > rewards[jr]:
-            current_state = -1
-            jr += 1
-        if current_state == -1:
-            filstate.write('-\n')
-        else:
-            filstate.write("%d\n" % (current_state,))
+    for i in range(0, len(labels), state_duration):
+        label = max(labels[i:i+state_duration])
+        filout.write('-\n' if label == 0 else '0\n' if label == 1 else '1\n')
                 
     
     
