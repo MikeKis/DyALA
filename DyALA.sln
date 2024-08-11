@@ -21,6 +21,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "aux-studies", "aux-studies"
 EndProject
 Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "valdif_test", "aux-studies\valdif_test\valdif_test.pyproj", "{1947CF70-ED32-426C-8348-9888F5437FD7}"
 EndProject
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "manual_success", "ping-pong\manual_success\manual_success.pyproj", "{8B0A17A1-8BEF-4322-957B-902ACEF179E8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -81,6 +83,12 @@ Global
 		{1947CF70-ED32-426C-8348-9888F5437FD7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1947CF70-ED32-426C-8348-9888F5437FD7}.Release|x64.ActiveCfg = Release|Any CPU
 		{1947CF70-ED32-426C-8348-9888F5437FD7}.Release|x86.ActiveCfg = Release|Any CPU
+		{8B0A17A1-8BEF-4322-957B-902ACEF179E8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8B0A17A1-8BEF-4322-957B-902ACEF179E8}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{8B0A17A1-8BEF-4322-957B-902ACEF179E8}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{8B0A17A1-8BEF-4322-957B-902ACEF179E8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8B0A17A1-8BEF-4322-957B-902ACEF179E8}.Release|x64.ActiveCfg = Release|Any CPU
+		{8B0A17A1-8BEF-4322-957B-902ACEF179E8}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -93,6 +101,7 @@ Global
 		{C85C679E-E4BA-4600-955B-FED235AE54EC} = {72A50BE0-2104-46C5-BFAD-8A492FB1FB4D}
 		{6E73DCBD-9FBA-4733-8267-95ED83804614} = {72A50BE0-2104-46C5-BFAD-8A492FB1FB4D}
 		{1947CF70-ED32-426C-8348-9888F5437FD7} = {2BBA474C-0476-4777-AEBB-82EBDC6D3CCC}
+		{8B0A17A1-8BEF-4322-957B-902ACEF179E8} = {72A50BE0-2104-46C5-BFAD-8A492FB1FB4D}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0F88527E-26F8-43E0-A8C6-C3CB689440BD}

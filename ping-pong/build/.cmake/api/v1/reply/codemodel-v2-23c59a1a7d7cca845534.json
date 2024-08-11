@@ -1,0 +1,120 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"childIndexes" : 
+					[
+						1,
+						2
+					],
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.14"
+					},
+					"projectIndex" : 0,
+					"source" : "."
+				},
+				{
+					"build" : "environment",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.14"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 1,
+					"source" : "environment",
+					"targetIndexes" : 
+					[
+						0
+					]
+				},
+				{
+					"build" : "ping-pong-visualizer",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.14"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 2,
+					"source" : "ping-pong-visualizer",
+					"targetIndexes" : 
+					[
+						1
+					]
+				}
+			],
+			"name" : "Release",
+			"projects" : 
+			[
+				{
+					"childIndexes" : 
+					[
+						1,
+						2
+					],
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "ping-pong"
+				},
+				{
+					"directoryIndexes" : 
+					[
+						1
+					],
+					"name" : "ping-pong-environment",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						0
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						2
+					],
+					"name" : "ping-pong-visualizer",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						1
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 1,
+					"id" : "ping-pong-environment::@c7c50b959a9660888084",
+					"jsonFile" : "target-ping-pong-environment-Release-712a124a68f5db922cc0.json",
+					"name" : "ping-pong-environment",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "ping-pong-visualizer::@f97ba4de3cf60be6b49d",
+					"jsonFile" : "target-ping-pong-visualizer-Release-eb5fc5a914e5783c74be.json",
+					"name" : "ping-pong-visualizer",
+					"projectIndex" : 2
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/home/mike/E/DyALA/ping-pong/build",
+		"source" : "/home/mike/E/DyALA/ping-pong"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 1
+	}
+}

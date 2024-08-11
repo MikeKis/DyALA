@@ -29,13 +29,14 @@ extern bool b_forVerifier_Reward;
 
 int nGoalLevels;
 
-int ntact = 0;
+int ntact = -1;
 int tactStart;
 
 int nRewards = 0;
 int nPunishments = 0;
 int nRewardsTot = 0;
 int nPunishmentsTot = 0;
+int InputBlockCounter = 0;
 
 class DYNAMIC_LIBRARY_EXPORTED_CLASS Evaluator: public IReceptors
 {
@@ -58,7 +59,7 @@ protected:
             }
 public:
     Evaluator(enum Evaluator::type t, size_t tactbeg = 0) : IReceptors(1), typ(t) {}
-    virtual bool bGenerateSignals(unsigned *pfl) override
+    virtual bool bGenerateSignals(unsigned *pfl, int bitoffset) override
     {
         switch (typ) {
             case punishment: if (es.pprr_Ball->first < -0.5F) {
@@ -84,6 +85,7 @@ public:
             *pfl = 1;
             PeriodCounter = RewardTrainPeriod;
             --TrainCounter;
+            InputBlockCounter = afterRewardSilence;
         }
         return true;
     }
@@ -108,7 +110,7 @@ class DYNAMIC_LIBRARY_EXPORTED_CLASS rec_ping_pong: public IReceptors
     vector<float> vr_VelocityZoneBoundary;
     vector<AdaptiveSpikeSource> vass_;
 protected:
-    virtual bool bGenerateSignals(unsigned *pfl) override
+    virtual bool bGenerateSignals(unsigned *pfl, int bitoffset) override
     {
         vector<int> vind_(6);
 #define indxBall vind_[0]
@@ -118,6 +120,7 @@ protected:
 #define indRacket vind_[4]
 #define indRaster vind_[5]
 
+        ++ntact;
         UpdateWorld(vr_CurrentPhaseSpacePoint);
 
 
@@ -128,7 +131,10 @@ protected:
                 ofsState << ',' << z;
             ofsState << endl;
         }
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/master
 
         indxBall = (int)((vr_CurrentPhaseSpacePoint[0] + 0.5) / (1. / nSpatialZones));
         if (indxBall == nSpatialZones)
@@ -144,22 +150,24 @@ protected:
         if (indRacket == nSpatialZones)
             indRacket = nSpatialZones - 1;
         vector<unsigned> vfl_(AfferentSpikeBufferSizeDW(nReceptors), 0);
+        if (!InputBlockCounter) {
 #define set_input_spike(ind) if (vass_[ind].bFire()) &vfl_.front() |= BitMaskAccess(ind)
-        set_input_spike(indxBall);
-        set_input_spike(nSpatialZones + indyBall);
-        set_input_spike(nSpatialZones * 2 + indvxBall);
-        set_input_spike(nSpatialZones * 2 + nVelocityZones + indvyBall);
-        set_input_spike(nSpatialZones * 2 + nVelocityZones * 2 + indRacket);
-        int indxRel = (int)((vr_CurrentPhaseSpacePoint[0] + 0.5) / rRelPosStep);
-        if (indxRel < nRelPos) {
-            int indyRel = (int)((vr_CurrentPhaseSpacePoint[4] - vr_CurrentPhaseSpacePoint[1] + rRelPosStep / 2) / rRelPosStep);   // Raster goes from top (higher y) to bottom - in opposite
-                                                                 // direction to y axis
-            if (abs(indyRel) <= (nRelPos - 1) / 2) {
-                indyRel += (nRelPos - 1) / 2;
-                indRaster = indyRel * nRelPos + indxRel;
-                set_input_spike(nSpatialZones * 3 + nVelocityZones * 2 + indRaster);
+            set_input_spike(indxBall);
+            set_input_spike(nSpatialZones + indyBall);
+            set_input_spike(nSpatialZones * 2 + indvxBall);
+            set_input_spike(nSpatialZones * 2 + nVelocityZones + indvyBall);
+            set_input_spike(nSpatialZones * 2 + nVelocityZones * 2 + indRacket);
+            int indxRel = (int)((vr_CurrentPhaseSpacePoint[0] + 0.5) / rRelPosStep);
+            if (indxRel < nRelPos) {
+                int indyRel = (int)((vr_CurrentPhaseSpacePoint[4] - vr_CurrentPhaseSpacePoint[1] + rRelPosStep / 2) / rRelPosStep);   // Raster goes from top (higher y) to bottom - in opposite
+                // direction to y axis
+                if (abs(indyRel) <= (nRelPos - 1) / 2) {
+                    indyRel += (nRelPos - 1) / 2;
+                    indRaster = indyRel * nRelPos + indxRel;
+                    set_input_spike(nSpatialZones * 3 + nVelocityZones * 2 + indRaster);
+                }
             }
-        }
+        } else --InputBlockCounter;
         copy(vfl_.begin(), vfl_.end(), pfl);
 
         return true;
@@ -254,7 +262,7 @@ protected:
     }
 public:
     Actions(): IReceptors(2) {}
-    virtual bool bGenerateSignals(unsigned *pfl) override
+    virtual bool bGenerateSignals(unsigned *pfl, int bitoffset) override
     {
         *pfl = rPastRY == BIGREALNUMBER || rPastRY == vr_CurrentPhaseSpacePoint[4] ? 0 : rPastRY > vr_CurrentPhaseSpacePoint[4] ? 1 : 2;
         rPastRY = vr_CurrentPhaseSpacePoint[4];

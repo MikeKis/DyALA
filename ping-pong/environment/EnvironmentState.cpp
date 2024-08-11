@@ -4,10 +4,12 @@
 
 using namespace std;
 
+extern int nNeuronsperAction;
+
 extern pair<float, float> prr_BallSpeed;
 
-const unsigned minSpotPassageTime_ms = 300;
-const unsigned maxSpotPassageTime_ms = 1000;
+const unsigned minSpotPassageTime_ms = 200;
+const unsigned maxSpotPassageTime_ms = 700;
 
 EnvironmentState es;
 RandomNumberGenerator rng;
@@ -35,4 +37,12 @@ void EnvironmentState::ResetBall(bool bPunishment)
         prr_BallSpeed.first = rBallVelocity * sin(rBallMovementDirection);
     } while (prr_BallSpeed.first < 1. / (2 * maxSpotPassageTime_ms) || !bPunishment && prr_BallSpeed.first < 0.);
     prr_BallSpeed.second = rBallVelocity * cos(rBallMovementDirection);
+
+    // It is a special temporary regime for intermediate goal mechanism training data creation.
+
+    if (!nNeuronsperAction)
+        ResetRacket();
+
 }
+
+void EnvironmentState::ResetRacket() {*prRacket = (float)(-0.5 + RACKET_SIZE / 2 + rng(1. - RACKET_SIZE));}
