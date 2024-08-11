@@ -62,7 +62,7 @@ double devaluate(int ind, const VECTOR<PAIR<float,VECTOR<PAIR<int,bool> > > > &v
     SUBMACRO(SPIKING_INPUT);
     SUBMACRO(TARGET_FILE);
     SUBVALUE("NCLASSES", NTARGETCLASSES);
-    SUBVALUE("NINPUTS", NINPUT);
+    SUBMACRO(NINPUTS);
     SUBVALUE("NO_CLASS_LABEL", "0");
     SUBVALUE("CRITERION", "averaged_F");
 
@@ -119,7 +119,6 @@ double devaluate(int ind, const VECTOR<PAIR<float,VECTOR<PAIR<int,bool> > > > &v
 			mutLog.lock();
 			ofsTaskLog << "ind" << ind << " - " << EMULATOR << " started at " << boost::posix_time::second_clock::local_time() << std::endl;
 			mutLog.unlock();
-			sprintf(buf + 300, "-T%d", MAXEMULATIONTIME);
             vstr_argsEmulator.resize(4);
 			vstr_argsEmulator[0] = ".." FOLDER_SEPARATOR "Experiments";
 			vstr_argsEmulator[1] = buf;
