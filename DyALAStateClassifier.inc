@@ -3,7 +3,7 @@
 #define RECOGNIZER ""
 
 #define LEARNING_TIME 2800000   // Because half of all time is silence.
-#define STATE_PRESENTATION_TACTS 10
+#define STATE_PRESENTATION_TACTS 10   // Do not change: LCharTime = STATE_PRESENTATION_TACTS / 3
 #define INTERSTATE_SILENCE_TACTS 10
 #define NTACTPERCASE (STATE_PRESENTATION_TACTS + INTERSTATE_SILENCE_TACTS)
 #define SPIKING_INPUT "inpstaticperm.txt"
@@ -13,9 +13,9 @@
 //#define MAXNNEU 1000
 #define SECOND_TEST_THRESHOLD 0x7fffffff   // DO NOT USE PROTOCOL POSTPROCESSOR !!
 #define NTARGETCLASSES 1
-#define TARGETBIAS 3                       // ONLY HERE!! In fact, it is ceil(THRESHOLD_BASE * 0.001) / (LCharTime * (1 - pow(1 - 1. / LCharTime, PRESENTATIONPERIOD)))
 #define NNETWORKCOPIES 1                   // It will be optimized by cooredinate descent
 #define LEARNINGGROUPSIZE 1
+#define TARGETBIAS 3                       // ONLY HERE!! In fact, it is ceil(THRESHOLD_BASE * 0.001) / (LCharTime * (1 - pow(1 - 1. / LCharTime, STATE_PRESENTATION_TACTS)))
 
 NetworkTestingParams ntpG{EMULATOR, RECOGNIZER, NTESTS, SECOND_TEST_THRESHOLD, NoStructuralCriterion, 1000};   // It is because experiment ID space for GA is 1000-2000. The original experminet ID begins from 0. For local execution it is incremented
 // by 1000. This incremented value is passed through -e option. But in cluster management code this task is registered by the original ID.
@@ -23,10 +23,15 @@ NetworkTestingParams ntpG{EMULATOR, RECOGNIZER, NTESTS, SECOND_TEST_THRESHOLD, N
 
 CHROMOSOME_DEFINITION
 {
-    INITIALIZE_GENE(DW, rng.logUniform(0.03, 3.)),
+    INITIALIZE_GENE(DWPOS, rng.logUniform(0.03, 3.)),
+    INITIALIZE_GENE(RELDWNEG, rng()),
     INITIALIZE_GENE(MAXWEIGHT, rng.logUniform(0.3, 3.)),
     INITIALIZE_GENE(MINWEIGHT, rng.logUniform(0.003, 3.)),
-    INITIALIZE_GENE(NLEARNINGGROUPS, rng.logUniform(1, 30))
+    INITIALIZE_GENE(NLEARNINGGROUPS, rng.logUniform(1, 30)),
+    INITIALIZE_GENE(STABILITYRESOURCECHANGERATIO, rng.logUniform(0.03, 30)),
+    INITIALIZE_GENE(NSILENTSYNAPSES, rng.logUniform(1, 1000)),
+    INITIALIZE_GENE(HEBBIANPLASTICITYCHARTIMERATIO, 3 + rng(3.)),
+    INITIALIZE_GENE(THRESHOLDWINC, rng.logUniform(0.0001, 1.))
 };
 
 #define NO_GENE_DEPENDENCIES
@@ -61,29 +66,36 @@ double devaluate(int ind, const VECTOR<PAIR<float,VECTOR<PAIR<int,bool> > > > &v
     SUBMACRO(LEARNING_TIME);
     SUBMACRO(SPIKING_INPUT);
     SUBMACRO(TARGET_FILE);
-    SUBVALUE("NCLASSES", NTARGETCLASSES);
+    SUBVALUE("NSTATES", NTARGETCLASSES);
     SUBMACRO(NINPUTS);
     SUBVALUE("NO_CLASS_LABEL", "0");
     SUBVALUE("CRITERION", "averaged_F");
-
-    SUBMACRO(NTACTPERCASE);
 
     SUBVALUE("OUTPUT", "OUT");
     SUBVALUE("INPUT", "R");
     SUBVALUE("REWARD", "Target");
 
+    SUBMACRO(NTACTPERCASE);
+
     SUBVALUE("NLEARNERS", NTARGETCLASSES * nint(GV(NLEARNINGGROUPS)) * LEARNINGGROUPSIZE);
     SUBVALUE("MAXOUTISI", STATE_PRESENTATION_TACTS);
     int LCharTime = STATE_PRESENTATION_TACTS / 3;
     SUBVALUE("LCHARTIME", LCharTime);
+    SUBVALUE("DWNEG", GV(DWPOS) * GV(RELDWNEG));
+    
     SUBVALUE("INIRESOURCE0", rWeight0Resource(-GV(MINWEIGHT), GV(MAXWEIGHT)));
-    SUBMACRO(TARGETBIAS);
 
-    SUBGENE(DW);
+    SUBGENE(DWPOS);
     SUBGENE(MAXWEIGHT);
     SUBGENE(MINWEIGHT);
     SUBVALUE("SPARCITY", 1.);
     SUBVALUE("DOPAMINEPLASTICITYTIME", STATE_PRESENTATION_TACTS);
+
+    SUBGENE(STABILITYRESOURCECHANGERATIO);
+    SUBGENE(THRESHOLDWINC);
+    SUBGENEINT(NSILENTSYNAPSES);
+    SUBMACRO(TARGETBIAS);
+
 
 //    EXCLUDESECTION("CONVOLUTION");
 
