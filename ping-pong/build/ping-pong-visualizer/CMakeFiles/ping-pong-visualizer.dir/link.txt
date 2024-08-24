@@ -1,1 +1,0 @@
-/usr/bin/c++ -O3 -g -DNDEBUG CMakeFiles/ping-pong-visualizer.dir/ping-pong-visualizer.cpp.o -o /home/mike/E/DyALA/Workplace/ping-pong-visualizer   -L/usr/local/lib  -Wl,-rpath,/usr/local/lib -lboost_system -lboost_filesystem -lboost_thread -lpthread -lsfml-window -lsfml-system -lsfml-graphics -lrt 
