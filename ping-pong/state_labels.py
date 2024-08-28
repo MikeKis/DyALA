@@ -31,7 +31,7 @@ with open(state_file, newline = '') as filsta:
             last_bounce = len(labels)
         labels.append(0)  
         bounced = x <= -0.5
-            
+
 with open(label_file, "wt") as filout:
     js = 0
     jr = 0

@@ -47,4 +47,4 @@ public:
 
 const int RewardTrainLength = 1 /*10*/;
 const int RewardTrainPeriod = 2;
-const int afterRewardSilence = 10;
+const int afterRewardSilence = 30;

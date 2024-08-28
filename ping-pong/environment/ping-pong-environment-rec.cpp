@@ -131,6 +131,10 @@ protected:
                 ofsState << ',' << z;
             ofsState << endl;
         }
+<<<<<<< HEAD
+
+=======
+>>>>>>> origin/master
 
         indxBall = (int)((vr_CurrentPhaseSpacePoint[0] + 0.5) / (1. / nSpatialZones));
         if (indxBall == nSpatialZones)
