@@ -7,7 +7,7 @@ Created on Wed Apr  3 17:04:20 2024
 """
 import csv
 
-period_duration = 300
+# period_duration = 300
 state_file = "ping_pong_state.csv"
 label_file = "rewstastates.txt"
 state_duration = 10
