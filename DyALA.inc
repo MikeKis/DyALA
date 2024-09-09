@@ -1,8 +1,14 @@
-﻿//#define USE_CPU
+﻿#define USE_CPU
+
+#ifndef USE_CPU
 #define EMULATOR "ArNIGPU"
+#define NTESTS 3
+#else
+#define EMULATOR "ArNICPU"
+#define NTESTS 1
+#endif
 
 #define MAXEMULATIONTIME 2000000
-#define NTESTS 3
 
 #define SECOND_TEST_THRESHOLD 1000000    // prohibitive value - to avoid running structural test
 #define RECOGNIZER ""  // it should be retained.
@@ -131,7 +137,11 @@ double devaluate(int ind, const VECTOR<PAIR<float,VECTOR<PAIR<int,bool> > > > &v
 			vstr_argsEmulator[1] = buf;
 			vstr_argsEmulator[2] = buf + 300;
 			vstr_argsEmulator[3] = "-D100000";
-			vstr_argsEmulator[4] = "-R";
+#ifndef USE_CPU
+                        vstr_argsEmulator[4] = "-R";
+#else
+                        vstr_argsEmulator[4] = "-v2";
+#endif
 			vstr_argsEmulator[5] = "-dS30000";
 #ifndef USE_CPU
 			sprintf(buf + 100, "-C%d", SelectedDevice);

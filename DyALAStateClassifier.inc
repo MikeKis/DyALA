@@ -2,6 +2,8 @@
 #define EMULATOR "ArNIGPU"
 #define RECOGNIZER ""
 
+//------------------------------------------------------------------------------------------------
+// $$$ COMMON DEFINES
 #define LEARNING_TIME 748940   // Because half of all time is silence.
 #define STATE_PRESENTATION_TACTS 10   // Do not change: LCharTime = STATE_PRESENTATION_TACTS / 3
 #define INTERSTATE_SILENCE_TACTS 10
@@ -16,11 +18,15 @@
 #define NNETWORKCOPIES 1                   // It will be optimized by cooredinate descent
 #define LEARNINGGROUPSIZE 1
 #define TARGETBIAS 3                       // ONLY HERE!! In fact, it is ceil(THRESHOLD_BASE * 0.001) / (LCharTime * (1 - pow(1 - 1. / LCharTime, STATE_PRESENTATION_TACTS)))
+//------------------------------------------------------------------------------------------------
 
-NetworkTestingParams ntpG{EMULATOR, RECOGNIZER, NTESTS, SECOND_TEST_THRESHOLD, NoStructuralCriterion, 1000};   // It is because experiment ID space for GA is 1000-2000. The original experminet ID begins from 0. For local execution it is incremented
+NetworkTestingParams ntpG{EMULATOR, RECOGNIZER, NTESTS, SECOND_TEST_THRESHOLD, NoStructuralCriterion, STARTING_EXPERIMENT_ID};   // It is because experiment ID space for GA is 1000-2000. The original experminet ID begins from 0. For local execution it is incremented
 // by 1000. This incremented value is passed through -e option. But in cluster management code this task is registered by the original ID.
 // Logics for CD are different!!
 
+#ifndef ARNI_CD
+//------------------------------------------------------------------------------------------------
+// $$$ DEFINE CHROMOSOME
 CHROMOSOME_DEFINITION
 {
     INITIALIZE_GENE(DWPOS, rng.logUniform(0.03, 3.)),
@@ -33,8 +39,8 @@ CHROMOSOME_DEFINITION
     INITIALIZE_GENE(HEBBIANPLASTICITYCHARTIMERATIO, 3 + rng(3.)),
     INITIALIZE_GENE(THRESHOLDWINC, rng.logUniform(0.0001, 1.))
 };
-
 #define NO_GENE_DEPENDENCIES
+//------------------------------------------------------------------------------------------------
 
 #ifndef FOR_LINUX
 #pragma warning(disable:4244)
@@ -53,56 +59,69 @@ int StructuralCriterion(int)
     throw std::logic_error("StructuralCriterion used!!!");
     return 0;
 }   // not used
+#else   // ARNI_CD not defined
+unsigned Experiment = 3000;
+//------------------------------------------------------------------------------------------------
+// $$$ SET CUSTOM PARAMETER BOUNDARIES
+bool bBadHyperparameters(const vector<int> &v_point, const vector<dimension> &vdim_) {return V("NLEARNINGGROUPS") < 1;}
+//------------------------------------------------------------------------------------------------
+#endif   // ARNI_CD defined
 
-double devaluate(int ind, const VECTOR<PAIR<float,VECTOR<PAIR<int,bool> > > > &vprvpindb_, double dConnectivityFactor = 1.)
+EVALUATOR
 {
 	int a, SelectedDevice;
+#ifdef ARNI_CD
+    if (bBadHyperparameters(v_point, vdim_))
+            return 0;
+#endif
 
 // Create network configuration file and storing its contents in log file
 
+//------------------------------------------------------------------------------------------------
+// $$$ SPECIFY NNP FILE
     SETNNP(".." FOLDER_SEPARATOR "Experiments" FOLDER_SEPARATOR "Classifier.nnp");
-
+//------------------------------------------------------------------------------------------------
+// $$$ SUBSTITUTE ALL VALUES
     SUBMACRO(NNETWORKCOPIES);
     SUBMACRO(LEARNING_TIME);
     SUBMACRO(SPIKING_INPUT);
     SUBMACRO(TARGET_FILE);
-    SUBVALUE("NSTATES", NTARGETCLASSES);
     SUBMACRO(NINPUTS);
+    SUBMACRO(NTACTPERCASE);
+    SUBMACRO(TARGETBIAS);
+    SUBVALUE("NSTATES", NTARGETCLASSES);
     SUBVALUE("NO_CLASS_LABEL", "0");
     SUBVALUE("CRITERION", "averaged_F");
-
     SUBVALUE("OUTPUT", "OUT");
     SUBVALUE("INPUT", "R");
     SUBVALUE("REWARD", "Target");
-
-    SUBMACRO(NTACTPERCASE);
-
-    SUBVALUE("NLEARNERS", NTARGETCLASSES * nint(GV(NLEARNINGGROUPS)) * LEARNINGGROUPSIZE);
+    SUBVALUE("NLEARNERS", NTARGETCLASSES * nint(V(NLEARNINGGROUPS)) * LEARNINGGROUPSIZE);
     SUBVALUE("MAXOUTISI", STATE_PRESENTATION_TACTS);
     int LCharTime = STATE_PRESENTATION_TACTS / 3;
     SUBVALUE("LCHARTIME", LCharTime);
-    SUBVALUE("DWNEG", GV(DWPOS) * GV(RELDWNEG));
-    
-    SUBVALUE("INIRESOURCE0", rWeight0Resource(-GV(MINWEIGHT), GV(MAXWEIGHT)));
-
-    SUBGENE(DWPOS);
-    SUBGENE(MAXWEIGHT);
-    SUBGENE(MINWEIGHT);
+    SUBVALUE("DWNEG", V(DWPOS) * V(RELDWNEG));
+    SUBVALUE("INIRESOURCE0", rWeight0Resource(-V(MINWEIGHT), V(MAXWEIGHT)));
     SUBVALUE("SPARCITY", 1.);
     SUBVALUE("DOPAMINEPLASTICITYTIME", STATE_PRESENTATION_TACTS);
     SUBVALUE("TARGETSTIMULATIONPERIOD", STATE_PRESENTATION_TACTS + INTERSTATE_SILENCE_TACTS);
-
-    SUBGENE(STABILITYRESOURCECHANGERATIO);
-    SUBGENE(THRESHOLDWINC);
-    SUBGENE(HEBBIANPLASTICITYCHARTIMERATIO);
-    SUBGENEINT(NSILENTSYNAPSES);
-    SUBMACRO(TARGETBIAS);
-
-
+    SUBV(DWPOS);
+    SUBV(MAXWEIGHT);
+    SUBV(MINWEIGHT);
+    SUBV(STABILITYRESOURCECHANGERATIO);
+    SUBV(THRESHOLDWINC);
+    SUBV(HEBBIANPLASTICITYCHARTIMERATIO);
+    SUBVINT(NSILENTSYNAPSES);
 //    EXCLUDESECTION("CONVOLUTION");
+//------------------------------------------------------------------------------------------------
+
+#ifndef ARNI_CD
+    unsigned CurrentExperiment = 1000 + ind;
+#else
+    unsigned CurrentExperiment = InterlockedIncrement(&Experiment);
+#endif
 
     char buf[3000];
-    sprintf(buf, ".." FOLDER_SEPARATOR "Experiments" FOLDER_SEPARATOR "%d.nnc", 1000 + ind);
+    sprintf(buf, ".." FOLDER_SEPARATOR "Experiments" FOLDER_SEPARATOR "%d.nnc", CurrentExperiment);
 	ofstream ofs(buf);
 	SAVENNC(ofs);
 	ofs.close();
@@ -117,11 +136,11 @@ double devaluate(int ind, const VECTOR<PAIR<float,VECTOR<PAIR<int,bool> > > > &v
 
 	// Run simulation
 
-	sprintf(buf, "monitoring.%d.csv", 1000 + ind);
+    sprintf(buf, "monitoring.%d.csv", CurrentExperiment);
 	string strMonitoringFile(buf);
-    sprintf(buf, "-e%d", 1000 + ind);
+    sprintf(buf, "-e%d", CurrentExperiment);
     int ntrials = 0;
-	boost::this_thread::sleep(boost::posix_time::milliseconds((ind % 101) * 300));
+    boost::this_thread::sleep(boost::posix_time::milliseconds((CurrentExperiment % 101) * 300));
 	int sum;
 	vector<string> vstr_argsEmulator;
 	do {
@@ -131,8 +150,8 @@ double devaluate(int ind, const VECTOR<PAIR<float,VECTOR<PAIR<int,bool> > > > &v
 			++vpn_ComputingDeviceStatus[SelectedDevice].first;
 			mutsoc.unlock();
 			mutLog.lock();
-			ofsTaskLog << "ind" << ind << " - " << EMULATOR << " started at " << boost::posix_time::second_clock::local_time() << std::endl;
-			mutLog.unlock();
+            ofsTaskLog << "Experiment " << CurrentExperiment << " - " << EMULATOR << " started at " << boost::posix_time::second_clock::local_time() << std::endl;
+            mutLog.unlock();
             vstr_argsEmulator.resize(4);
 			vstr_argsEmulator[0] = ".." FOLDER_SEPARATOR "Experiments";
 			vstr_argsEmulator[1] = buf;
@@ -144,25 +163,30 @@ double devaluate(int ind, const VECTOR<PAIR<float,VECTOR<PAIR<int,bool> > > > &v
 #endif
 
 			sum = 0;
+            vector<int> v_ReturnedValues;
 			FORI(NTESTS) {
 				a = ExecuteProcess(EMULATOR, vstr_argsEmulator, ofsTaskLog);
 				if (a < 0) {
 					printf("\a\a\a Abnormal " EMULATOR " termination -- trying to restart few minutes later!!!\n");
 					mutLog.lock();
-					ofsTaskLog << "ind" << ind << " abnormal " EMULATOR " termination -- trying to restart (" << boost::posix_time::second_clock::local_time() << ")\n";
-					mutLog.unlock();
+                    ofsTaskLog << "Experiment " << CurrentExperiment << " abnormal " EMULATOR " termination -- trying to restart (" << boost::posix_time::second_clock::local_time() << ")\n";
+                    mutLog.unlock();
 					break;
 				}
 				if (a >= SHOULD_BE_LAUNCHED_ON_ANOTHER_NODE)
 					break;
 				sum += a;
+                v_ReturnedValues.push_back(a);
 			}
 			mutsoc.lock();
 			--vpn_ComputingDeviceStatus[SelectedDevice].first;
 			mutsoc.unlock();
 			mutLog.lock();
-			ofsTaskLog << "ind" << ind << " - " << EMULATOR << " finished at " << boost::posix_time::second_clock::local_time() <<  " returned  " << a << std::endl;
-			mutLog.unlock();
+            ofsTaskLog << "Experiment " << CurrentExperiment << " - " << EMULATOR << " finished at " << boost::posix_time::second_clock::local_time() <<  " returned";
+            for (auto z: v_ReturnedValues)
+                ofsTaskLog << ' ' << z;
+            ofsTaskLog << std::endl;
+            mutLog.unlock();
 			if (a >= 0)
 				break;
 			boost::this_thread::sleep(boost::posix_time::seconds(200));
@@ -175,7 +199,7 @@ double devaluate(int ind, const VECTOR<PAIR<float,VECTOR<PAIR<int,bool> > > > &v
 			} while (true);
 		if (a < SHOULD_BE_LAUNCHED_ON_ANOTHER_NODE) {
 			remove(strMonitoringFile.c_str());
-			sprintf(buf, "%d.finsave.nns", 1000 + ind);
+            sprintf(buf, "%d.finsave.nns", CurrentExperiment);
 			remove(buf);
 			return(sum / NTESTS);
 		}
@@ -186,27 +210,29 @@ double devaluate(int ind, const VECTOR<PAIR<float,VECTOR<PAIR<int,bool> > > > &v
 		time_t tim = time(NULL);
 		ctime_s(buf + 200, 100, &tim);
 		mutLog.lock();
-		ofsTaskLog << "ind" << ind << " - task sent to another cluster node at " << boost::posix_time::second_clock::local_time() << " (device " << SelectedDevice << ")" << endl;
-		mutLog.unlock();
-		int ret = CoordinateCluster(a - SHOULD_BE_LAUNCHED_ON_ANOTHER_NODE, SelectedDevice, ind, vstr_argsEmulator, ssNNC.str(), strLog);
-		if (strLog.length()) {
+        ofsTaskLog << "Experiment " << CurrentExperiment << " - task sent to another cluster node at " << boost::posix_time::second_clock::local_time() << " (device " << SelectedDevice << ")" << endl;
+        mutLog.unlock();
+        int ret = CoordinateCluster(a - SHOULD_BE_LAUNCHED_ON_ANOTHER_NODE, SelectedDevice, REMOTE_EXPERIMENT_ID, vstr_argsEmulator, ssNNC.str(), strLog);
+        if (strLog.length()) {
 			mutsoc.lock();
 			--vpn_ComputingDeviceStatus[SelectedDevice].first;
 			mutsoc.unlock();
 			mutLog.lock();
-			ofsTaskLog << "ind " << ind << " result: " << ret << endl;
-			ofsTaskLog << strLog << "\n-------------------\n";
+            ofsTaskLog << "Experiment " << CurrentExperiment << " result: " << ret << endl;
+            ofsTaskLog << strLog << "\n-------------------\n";
 			mutLog.unlock();
 			return ret;
 		}
 		mutLog.lock();
-		ofsTaskLog << "ind " << ind << " -- too long waiting for result -- restarting on another device\n";
-		mutLog.unlock();
+        ofsTaskLog << "Experiment " << CurrentExperiment << " -- too long waiting for result -- restarting on another device\n";
+        mutLog.unlock();
 	} while (true);
 }
 
+#ifndef ARNI_CD
 double Chromosome::operator()(int ind) const {return devaluate(ind, vprvpindb_);}
 
 void Chromosome::ApplyAdditionalCriteria(VECTOR<double> &vd_AdditionalCriterionValues) const 
 {
 }
+#endif
