@@ -112,7 +112,7 @@ EVALUATOR
     SUBV(THRESHOLDWINC);
     SUBV(HEBBIANPLASTICITYCHARTIMERATIO);
     SUBVINT(NSILENTSYNAPSES);
-//    EXCLUDESECTION("CONVOLUTION");
+    EXCLUDESECTION("SEQUENTIAL_TRAIN");
 //------------------------------------------------------------------------------------------------
 
 #ifndef ARNI_CD
