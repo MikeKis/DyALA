@@ -104,6 +104,11 @@ public:
 };
 
 vector<float> vr_CurrentPhaseSpacePoint(5);
+int curindxBall = -1;
+int curindyBall = -1;
+int curindvxBall = -1;
+int curindvyBall = -1;
+int curindRacket = -1;
 
 class DYNAMIC_LIBRARY_EXPORTED_CLASS rec_ping_pong: public IReceptors
 {
@@ -147,12 +152,23 @@ protected:
             indRacket = nSpatialZones - 1;
         vector<unsigned> vfl_(AfferentSpikeBufferSizeDW(nReceptors), 0);
         if (!InputBlockCounter) {
-#define set_input_spike(ind) if (vass_[ind].bFire()) &vfl_.front() |= BitMaskAccess(ind)
-            set_input_spike(indxBall);
-            set_input_spike(nSpatialZones + indyBall);
-            set_input_spike(nSpatialZones * 2 + indvxBall);
-            set_input_spike(nSpatialZones * 2 + nVelocityZones + indvyBall);
-            set_input_spike(nSpatialZones * 2 + nVelocityZones * 2 + indRacket);
+            auto bset_input_spike = [&](int ind)
+                                    {
+                                        bool bret = vass_[ind].bFire();
+                                        if (bret)
+                                            &vfl_.front() |= BitMaskAccess(ind);
+                                        return bret;
+                                    };
+            if (bset_input_spike(indxBall))
+                curindxBall = indxBall;
+            if (bset_input_spike(nSpatialZones + indyBall))
+                curindyBall = indyBall;
+            if (bset_input_spike(nSpatialZones * 2 + indvxBall))
+                curindvxBall = indvxBall;
+            if (bset_input_spike(nSpatialZones * 2 + nVelocityZones + indvyBall))
+                curindvyBall = indvyBall;
+            if (bset_input_spike(nSpatialZones * 2 + nVelocityZones * 2 + indRacket))
+                curindRacket = indRacket;
             int indxRel = (int)((vr_CurrentPhaseSpacePoint[0] + 0.5) / rRelPosStep);
             if (indxRel < nRelPos) {
                 int indyRel = (int)((vr_CurrentPhaseSpacePoint[4] - vr_CurrentPhaseSpacePoint[1] + rRelPosStep / 2) / rRelPosStep);   // Raster goes from top (higher y) to bottom - in opposite
@@ -160,7 +176,7 @@ protected:
                 if (abs(indyRel) <= (nRelPos - 1) / 2) {
                     indyRel += (nRelPos - 1) / 2;
                     indRaster = indyRel * nRelPos + indxRel;
-                    set_input_spike(nSpatialZones * 3 + nVelocityZones * 2 + indRaster);
+                    bset_input_spike(nSpatialZones * 3 + nVelocityZones * 2 + indRaster);
                 }
             }
         } else --InputBlockCounter;
@@ -278,6 +294,89 @@ public:
     }
 };
 
+bool bGoodState()
+{
+    static vector<float> vr_VelocityZoneMedian;
+    if (vr_VelocityZoneMedian.empty()) {
+        vector<float> vr_samples(9000, 0.F);
+        for (auto &i: vr_samples) {
+            float rBallVelocity = rMakeBallVelocity();
+            float rBallMovementDirection = rng() * PI / 2;
+            i = rBallVelocity * sin(rBallMovementDirection);
+        }
+        sort(vr_samples.begin(), vr_samples.end());
+        vr_VelocityZoneMedian.resize((nVelocityZones - 1) / 2);
+        FORI(vr_VelocityZoneMedian.size())
+            vr_VelocityZoneMedian[_i] = vr_samples[(_i + 1) * 2 * vr_samples.size() / 9];
+    }
+    if (curindxBall < 0)
+        throw 0;
+    double dx = -0.5 + (0.5 + curindxBall) / nSpatialZones;
+    if (curindyBall < 0)
+        throw 0;
+    double dy = -0.5 + (0.5 + curindxBall) / nSpatialZones;
+    if (curindvxBall < 0)
+        throw 0;
+    double dvx = curindvxBall == nVelocityZones / 2 ? 0. : curindvxBall < nVelocityZones / 2 ? -vr_VelocityZoneMedian[nVelocityZones / 2 - curindvxBall - 1] : vr_VelocityZoneMedian[curindvxBall - nVelocityZones / 2 - 1];
+    if (!dvx)
+        return false;
+    if (curindvyBall < 0)
+        throw 0;
+    double dvy = curindvyBall == nVelocityZones / 2 ? 0. : curindvyBall < nVelocityZones / 2 ? -vr_VelocityZoneMedian[nVelocityZones / 2 - curindvyBall - 1] : vr_VelocityZoneMedian[curindvyBall - nVelocityZones / 2 - 1];
+    if (curindRacket < 0)
+        throw 0;
+    double dry = -0.5 + (0.5 + curindRacket) / nSpatialZones;
+    if (dvx > 0) {
+        dy += (0.5 - dx) * dvy / dvx;
+        dx = 0.5;
+        dvx = -dvx;
+    }
+    double ddx = dx + 0.5;
+    double dyint = dy - ddx * dvy / dvx + 0.5;
+    dyint -= floor(dyint / 2) * 2;
+    dry += 0.5;
+    if (dry - RACKET_SIZE / 2 < dyint && dyint < dry + RACKET_SIZE / 2)
+        return true;
+    else {
+        dry = 2 - dry;
+        if (dry - RACKET_SIZE / 2 < dyint && dyint < dry + RACKET_SIZE / 2)
+            return true;
+    }
+    return false;
+}
+
+class DYNAMIC_LIBRARY_EXPORTED_CLASS ManualStateClassifier: public IReceptors
+{
+protected:
+    virtual void GetMeanings(VECTOR<STRING> &vstr_Meanings) const override
+    {
+        vstr_Meanings.resize(2);
+        vstr_Meanings[0] = "GoodState";
+        vstr_Meanings[1] = "BadState";
+    }
+public:
+    ManualStateClassifier(): IReceptors(2) {}
+    virtual bool bGenerateSignals(unsigned *pfl, int bitoffset) override
+    {
+        try {
+            *pfl = bGoodState() ? 1 : 2;
+        } catch (...) {
+            *pfl = 0;
+        }
+        return true;
+    }
+    virtual void Randomize(void) override {};
+    virtual void SaveStatus(Serializer &ser) const override
+    {
+        IReceptors::SaveStatus(ser);
+    }
+    virtual ~ManualStateClassifier() = default;
+    void LoadStatus(Serializer &ser)
+    {
+        IReceptors::LoadStatus(ser);
+    }
+};
+
 PING_PONG_ENVIRONMENT_EXPORT IReceptors *SetParametersIn(int &nReceptors, const pugi::xml_node &xn)
 {
 	static int CallNo = 0;
@@ -290,6 +389,8 @@ PING_PONG_ENVIRONMENT_EXPORT IReceptors *SetParametersIn(int &nReceptors, const 
 			    return new rec_ping_pong;
         case 3: nReceptors = 2;
                 return new Actions;
+        case 4: nReceptors = 2;
+                return new ManualStateClassifier;
         default: cout << "ping-pong -- Too many calls of SetParametersIn\n";
 				exit(-1);
 	}
