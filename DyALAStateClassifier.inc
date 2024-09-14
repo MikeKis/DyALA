@@ -14,7 +14,7 @@
 #define NTESTS 3
 //#define MAXNNEU 1000
 #define SECOND_TEST_THRESHOLD 0x7fffffff   // DO NOT USE PROTOCOL POSTPROCESSOR !!
-#define NTARGETCLASSES 2
+#define NTARGETCLASSES 1
 #define NNETWORKCOPIES 1                   // It will be optimized by cooredinate descent
 #define LEARNINGGROUPSIZE 1
 #define CRITERION "Rsquared"
@@ -92,7 +92,7 @@ EVALUATOR
     SUBMACRO(TARGETBIAS);
     SUBMACRO(CRITERION);
     SUBVALUE("NSTATES", NTARGETCLASSES);
-    SUBVALUE("NO_CLASS_LABEL", "-");
+    SUBVALUE("NO_CLASS_LABEL", "0");
     SUBVALUE("OUTPUT", "OUT");
     SUBVALUE("INPUT", "R");
     SUBVALUE("REWARD", "Target");
