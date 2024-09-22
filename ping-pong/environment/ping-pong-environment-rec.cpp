@@ -58,7 +58,7 @@ protected:
             vstr_Meanings.front() = typ == reward ? "REW" : "PUN";
             }
 public:
-    Evaluator(enum Evaluator::type t, size_t tactbeg = 0) : IReceptors(1), typ(t) {}
+    Evaluator(enum Evaluator::type t, size_t tactbeg = 0) : typ(t) {}
     virtual bool bGenerateSignals(unsigned *pfl, int bitoffset) override
     {
         switch (typ) {
@@ -150,7 +150,7 @@ protected:
         indRacket = (int)((vr_CurrentPhaseSpacePoint[4] + 0.5) / (1. / nSpatialZones));
         if (indRacket == nSpatialZones)
             indRacket = nSpatialZones - 1;
-        vector<unsigned> vfl_(AfferentSpikeBufferSizeDW(nReceptors), 0);
+        vector<unsigned> vfl_(AfferentSpikeBufferSizeDW(GetNReceptors()), 0);
         if (!InputBlockCounter) {
             auto bset_input_spike = [&](int ind)
                                     {
@@ -222,7 +222,7 @@ protected:
             }
     }
 public:
-    rec_ping_pong(): IReceptors(nInputs), vr_VelocityZoneBoundary((nVelocityZones - 1) / 2), vass_(nInputs)
+    rec_ping_pong(): vr_VelocityZoneBoundary((nVelocityZones - 1) / 2), vass_(nInputs)
     {
         vector<float> vr_samples(9000);
         for (auto &i: vr_samples) {
@@ -265,6 +265,7 @@ public:
 class DYNAMIC_LIBRARY_EXPORTED_CLASS Actions: public IReceptors
 {
     float rPastRY = BIGREALNUMBER;
+    float rStep;
 protected:
     virtual void GetMeanings(VECTOR<STRING> &vstr_Meanings) const override
     {
@@ -273,13 +274,8 @@ protected:
         vstr_Meanings[1] = "ActUp";
     }
 public:
-    Actions(): IReceptors(2) {}
-    virtual bool bGenerateSignals(unsigned *pfl, int bitoffset) override
-    {
-        *pfl = rPastRY == BIGREALNUMBER || rPastRY == vr_CurrentPhaseSpacePoint[4] ? 0 : rPastRY > vr_CurrentPhaseSpacePoint[4] ? 1 : 2;
-        rPastRY = vr_CurrentPhaseSpacePoint[4];
-        return true;
-    }
+    Actions(float rstep): rStep(rstep) {}
+    virtual bool bGenerateSignals(unsigned *pfl, int bitoffset) override;
     virtual void Randomize(void) override {};
     virtual void SaveStatus(Serializer &ser) const override
     {
@@ -350,19 +346,13 @@ class DYNAMIC_LIBRARY_EXPORTED_CLASS ManualStateClassifier: public IReceptors
 protected:
     virtual void GetMeanings(VECTOR<STRING> &vstr_Meanings) const override
     {
-        vstr_Meanings.resize(2);
+        vstr_Meanings.resize(1);
         vstr_Meanings[0] = "GoodState";
-        vstr_Meanings[1] = "BadState";
     }
 public:
-    ManualStateClassifier(): IReceptors(2) {}
     virtual bool bGenerateSignals(unsigned *pfl, int bitoffset) override
     {
-        try {
-            *pfl = bGoodState() ? 1 : 2;
-        } catch (...) {
-            *pfl = 0;
-        }
+        *pfl = bGoodState() ? 1 : 0;
         return true;
     }
     virtual void Randomize(void) override {};
@@ -377,23 +367,102 @@ public:
     }
 };
 
-PING_PONG_ENVIRONMENT_EXPORT IReceptors *SetParametersIn(int &nReceptors, const pugi::xml_node &xn)
+class DYNAMIC_LIBRARY_EXPORTED_CLASS GrowingStimulation: public IReceptors
 {
-	static int CallNo = 0;
-	switch (CallNo++) {
-		case 0: nReceptors = 1;
-			    return new Evaluator(Evaluator::punishment);
-		case 1: nReceptors = 1;
-			    return new Evaluator(Evaluator::reward);
-		case 2: nReceptors = nInputs;
-			    return new rec_ping_pong;
-        case 3: nReceptors = 2;
-                return new Actions;
-        case 4: nReceptors = 2;
-                return new ManualStateClassifier;
-        default: cout << "ping-pong -- Too many calls of SetParametersIn\n";
-				exit(-1);
-	}
+    int ActivityTime = 0;
+    int maxIdleTime = 0;
+protected:
+    virtual void GetMeanings(VECTOR<STRING> &vstr_Meanings) const override
+    {
+        vstr_Meanings.resize(GetNReceptors());
+        FORI(GetNReceptors())
+            vstr_Meanings[_i] = "sti" + str(_i);
+    }
+public:
+    GrowingStimulation(int nrec, const pugi::xml_node &xn): ActivityTime(0)
+    {
+        if (nrec > 32) {
+            cout << "ping-pong -- Too many stimulating nodes\n";
+            exit(-1);
+        }
+        maxIdleTime = atoi_s(xn.child_value("maxidletime"));
+    }
+    virtual bool bGenerateSignals(unsigned *pfl, int bitoffset) override
+    {
+        *pfl = ActivityTime < 0 ? 0 : ActivityTime < 31 ? (1 << (ActivityTime + 1)) - 1 : 0xffffffff;
+        ++ActivityTime;
+        return true;
+    }
+    virtual void Randomize(void) override {};
+    virtual void SaveStatus(Serializer &ser) const override
+    {
+        IReceptors::SaveStatus(ser);
+    }
+    virtual ~GrowingStimulation() = default;
+    void LoadStatus(Serializer &ser)
+    {
+        IReceptors::LoadStatus(ser);
+    }
+    void reset(){ActivityTime = -maxIdleTime;}
+};
+
+GrowingStimulation *pgsG = NULL;
+
+bool Actions::bGenerateSignals(unsigned *pfl, int bitoffset)
+{
+    if (rPastRY != vr_CurrentPhaseSpacePoint[4])
+        pgsG->reset();
+    *pfl = 0;
+    if (rPastRY == BIGREALNUMBER)
+        rPastRY = vr_CurrentPhaseSpacePoint[4];
+    else if (vr_CurrentPhaseSpacePoint[4] < rPastRY - rStep) {
+        *pfl = 1;
+        rPastRY = vr_CurrentPhaseSpacePoint[4];
+    } else if (vr_CurrentPhaseSpacePoint[4] > rPastRY + rStep) {
+        *pfl = 2;
+        rPastRY = vr_CurrentPhaseSpacePoint[4];
+    }
+    return true;
+}
+
+RECEPTORS_SET_PARAMETERS(pchMyReceptorSectionName, nReceptors, xn)
+{
+    if (!strcmp(pchMyReceptorSectionName, "Punishment")) {
+        if (nReceptors < 0)
+            nReceptors = 1;
+        else if (nReceptors != 1)
+            throw std::runtime_error("Punishment - wrong input node count");
+        return new Evaluator(Evaluator::punishment);
+    } else if (!strcmp(pchMyReceptorSectionName, "Reward")) {
+        if (nReceptors < 0)
+            nReceptors = 1;
+        else if (nReceptors != 1)
+            throw std::runtime_error("Reward - wrong input node count");
+        return new Evaluator(Evaluator::reward);
+    } else if (!strcmp(pchMyReceptorSectionName, "R")) {
+        if (nReceptors < 0)
+            nReceptors = nInputs;
+        else if (nReceptors != nInputs)
+            throw std::runtime_error("R - wrong input node count");
+        return new rec_ping_pong;
+    } else if (!strcmp(pchMyReceptorSectionName, "Actions")) {
+        if (nReceptors < 0)
+            nReceptors = 2;
+        else if (nReceptors != 2)
+            throw std::runtime_error("Actions - wrong input node count");
+        return new Actions(atoi_s(xn.child_value("step")));
+    } else if (!strcmp(pchMyReceptorSectionName, "ManualStateEval")) {
+        if (nReceptors < 0)
+            nReceptors = 1;
+        else if (nReceptors != 1)
+            throw std::runtime_error("ManualStateEval - wrong input node count");
+        return new ManualStateClassifier;
+    } else if (!strcmp(pchMyReceptorSectionName, "GrowingStimulation"))
+        return new GrowingStimulation(nReceptors, xn);
+    else {
+        cout << "ping-pong -- unknown section name: " << pchMyReceptorSectionName << endl;
+        exit(-1);
+    }
 }
 
 PING_PONG_ENVIRONMENT_EXPORT IReceptors *LoadStatus(Serializer &ser)
