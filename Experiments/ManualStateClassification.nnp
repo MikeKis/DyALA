@@ -73,8 +73,8 @@
 	      <threshold_inc>$(LTHRESHOLDINC)</threshold_inc>
 	      <weight_inc>0</weight_inc>
 	      <dopamine_plasticity_time>$(PLASTICITYTIME)</dopamine_plasticity_time>
-	      <minweight>-$(MININPUTWEIGHT)</minweight>
-	      <maxweight>$(MAXINPUTWEIGHT)</maxweight>
+	      <minweight>-$(MINWEIGHT)</minweight>
+	      <maxweight>$(MAXWEIGHT)</maxweight>
 	      <stability_resource_change_ratio>$(STABILITYRESOURCECHANGERATIO)</stability_resource_change_ratio>
 	      <nsilentsynapses>$(NSILENTSYNAPSES)</nsilentsynapses>
 <!--MIGRATION-->

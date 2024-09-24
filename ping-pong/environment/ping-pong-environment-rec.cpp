@@ -306,21 +306,21 @@ bool bGoodState()
             vr_VelocityZoneMedian[_i] = vr_samples[(_i + 1) * 2 * vr_samples.size() / 9];
     }
     if (curindxBall < 0)
-        throw 0;
+        return false;
     double dx = -0.5 + (0.5 + curindxBall) / nSpatialZones;
     if (curindyBall < 0)
-        throw 0;
+        return false;
     double dy = -0.5 + (0.5 + curindxBall) / nSpatialZones;
     if (curindvxBall < 0)
-        throw 0;
+        return false;
     double dvx = curindvxBall == nVelocityZones / 2 ? 0. : curindvxBall < nVelocityZones / 2 ? -vr_VelocityZoneMedian[nVelocityZones / 2 - curindvxBall - 1] : vr_VelocityZoneMedian[curindvxBall - nVelocityZones / 2 - 1];
     if (!dvx)
         return false;
     if (curindvyBall < 0)
-        throw 0;
+        return false;
     double dvy = curindvyBall == nVelocityZones / 2 ? 0. : curindvyBall < nVelocityZones / 2 ? -vr_VelocityZoneMedian[nVelocityZones / 2 - curindvyBall - 1] : vr_VelocityZoneMedian[curindvyBall - nVelocityZones / 2 - 1];
     if (curindRacket < 0)
-        throw 0;
+        return false;
     double dry = -0.5 + (0.5 + curindRacket) / nSpatialZones;
     if (dvx > 0) {
         dy += (0.5 - dx) * dvy / dvx;
@@ -458,7 +458,7 @@ RECEPTORS_SET_PARAMETERS(pchMyReceptorSectionName, nReceptors, xn)
             throw std::runtime_error("ManualStateEval - wrong input node count");
         return new ManualStateClassifier;
     } else if (!strcmp(pchMyReceptorSectionName, "GrowingStimulation"))
-        return new GrowingStimulation(nReceptors, xn);
+        return pgsG = new GrowingStimulation(nReceptors, xn);
     else {
         cout << "ping-pong -- unknown section name: " << pchMyReceptorSectionName << endl;
         exit(-1);
