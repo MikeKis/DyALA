@@ -1,6 +1,6 @@
 LIBRARY	"ping-pong-environment"
 EXPORTS
-SetParametersIn=?SetParametersIn@@YAPEAVIReceptors@@AEAHAEBVxml_node@pugi@@@Z
+SetParametersIn=?SetParametersIn@@YAPEAVIReceptors@@PEBDAEAHAEBVxml_node@pugi@@@Z
 LoadStatus=?LoadStatus@@YAPEAVIReceptors@@AEAVSerializer@@@Z
 SetParametersOut=?SetParametersOut@@YAXH_KIAEBVxml_node@pugi@@@Z
 ObtainOutputSpikes=?ObtainOutputSpikes@@YA_NAEBV?$vector@HV?$allocator@H@std@@@std@@H@Z
