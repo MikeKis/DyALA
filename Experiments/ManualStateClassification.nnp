@@ -51,7 +51,7 @@
 	      <chartime>$(SECCHARTIME)</chartime>
 	      <threshold_decay_period>$(SECTHRESHOLDDECAYPERIOD)</threshold_decay_period>
 	      <threshold_inc>$(SECTHRESHOLDINC)</threshold_inc>
-	      <minpotential>$(MINPOTSEC)</minpotential>
+	      <minpotential>-$(MINPOTSEC)</minpotential>
 	    </props>
 	  </Section>
 	  <Section name="SECPUN">
