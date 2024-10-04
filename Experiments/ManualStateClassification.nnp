@@ -21,7 +21,13 @@
         <step>$(ACTIONSTEP)</step>
     </args>
   </RECEPTORS>
-  <RECEPTORS name="ManualStateEval" n="1">
+  <RECEPTORS name="SECPUN" n="1">
+    <Implementation lib="ping-pong-environment"></Implementation>
+    <args>
+	<state_change_delay>$(STATECHANGEDELAY)</state_change_delay>
+    </args>
+  </RECEPTORS>
+  <RECEPTORS name="SECREW" n="1">
     <Implementation lib="ping-pong-environment"></Implementation>
   </RECEPTORS>
   <RECEPTORS name="GrowingStimulation" n="30">
@@ -30,39 +36,8 @@
         <maxidletime>$(MAXIDLETIME)</maxidletime>
     </args>
   </RECEPTORS>
-  <RECEPTORS name="Constant" n="1">
-    <Implementation lib="fromFile">
-      <args type="none">
-        <period>1</period>
-        <history_length>30000000</history_length>  <!--JUST VERY LONG-->
-      </args>
-    </Implementation>
-  </RECEPTORS>
   <NETWORK>
 	<Sections>
-	  <Section name="BadState">
-	    <props>
-	      <n>1</n>
-	    </props>
-	  </Section>
-	  <Section name="SECREW">
-	    <props>
-	      <n>1</n>
-	      <chartime>$(SECCHARTIME)</chartime>
-	      <threshold_decay_period>$(SECTHRESHOLDDECAYPERIOD)</threshold_decay_period>
-	      <threshold_inc>$(SECTHRESHOLDINC)</threshold_inc>
-	      <minpotential>-$(MINPOTSEC)</minpotential>
-	    </props>
-	  </Section>
-	  <Section name="SECPUN">
-	    <props>
-	      <n>1</n>
-	      <chartime>$(SECCHARTIME)</chartime>
-	      <threshold_decay_period>$(SECTHRESHOLDDECAYPERIOD)</threshold_decay_period>
-	      <threshold_inc>$(SECTHRESHOLDINC)</threshold_inc>
-	      <minpotential>-$(MINPOTSEC)</minpotential>
-	    </props>
-	  </Section>
 	  <Section name="L">
 	    <props>
 	      <n>$(NNEU)</n>
@@ -92,52 +67,6 @@
 	      <n>2</n>
 	    </props>
 	  </Section>
-	  <Link from="ManualStateEval" to="BadState" type="gating" policy="all-to-all">
-	  	<weight>-$(GOODSTATEINERTIA)</weight>
-	  </Link>
-	  <Link from="Constant" to="BadState" policy="all-to-all">
-	  	<weight>10</weight>
-	  </Link>
-	  <Link from="ManualStateEval" to="SECREW" policy="all-to-all">
-	  	<weight>-10</weight>
-	      	<Delay type="uni">
-			<min>$(GOODSTATEINERTIA)</min>
-			<max>$(GOODSTATEINERTIA)</max>
-	      	</Delay>
-	  </Link>
-	  <Link from="BadState" to="SECREW" policy="all-to-all">
-	  	<weight>$(POSWSEC)</weight>
-	      	<Delay type="uni">
-			<min>$(STATECHANGEDELAY)</min>
-			<max>$(STATECHANGEDELAY)</max>
-	      	</Delay>
-	  </Link>
-	  <Link from="ManualStateEval" to="SECREW" policy="all-to-all">
-	  	<weight>$(POSWSEC)</weight>
-	  </Link>
-	  <Link from="BadState" to="SECREW" policy="all-to-all">
-	  	<weight>-10</weight>
-	  </Link>
-	  <Link from="BadState" to="SECPUN" policy="all-to-all">
-	  	<weight>-10</weight>
-	      	<Delay type="uni">
-			<min>$(GOODSTATEINERTIA)</min>
-			<max>$(GOODSTATEINERTIA)</max>
-	      	</Delay>
-	  </Link>
-	  <Link from="ManualStateEval" to="SECPUN" policy="all-to-all">
-	  	<weight>$(POSWSEC)</weight>
-	      	<Delay type="uni">
-			<min>$(STATECHANGEDELAY)</min>
-			<max>$(STATECHANGEDELAY)</max>
-	      	</Delay>
-	  </Link>
-	  <Link from="BadState" to="SECPUN" policy="all-to-all">
-	  	<weight>$(POSWSEC)</weight>
-	  </Link>
-	  <Link from="ManualStateEval" to="SECPUN" policy="all-to-all">
-	  	<weight>-10</weight>
-	  </Link>
 	  <Link from="R" to="L" type="plastic" policy="all-to-all">
 		  <IniResource type="uni">
 		    <min>$(INIRESOURCE0)</min>
