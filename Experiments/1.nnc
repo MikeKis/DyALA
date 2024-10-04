@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf - 8"?>
 <SNN>
   <Global>0</Global>
-  <Global>0.00552501</Global>
+  <Global>0.00945757</Global>
   <RECEPTORS name="R" n="133">
     <Implementation lib="fromFile">
       <args type="text">
@@ -15,11 +15,15 @@
         <target_file>inpstatictargetperm.txt</target_file>
         <spike_period>1</spike_period>
         <state_duration>20</state_duration>
-        <learning_time>748940</learning_time>
+        <learning_time>1468200</learning_time>
 	<no_class>0</no_class>
-	<criterion>averaged_F</criterion>
+	<no_class_value>0</no_class_value>
+	<criterion>Rsquared</criterion>
+
+<!--SEQUENTIAL_TEST-->
 	<sequential_test></sequential_test>
-	<prediction_file>tmp.csv</prediction_file>
+<!--/SEQUENTIAL_TEST-->
+	<prediction_file>restmp.csv</prediction_file>
       </args>
     </Implementation>
   </RECEPTORS>
@@ -27,30 +31,30 @@
     <Sections>
 	    <Section name="L">
 	      <props>
-		<n>4</n>
+		<n>11</n>
 		<Structure type="O" dimension="1"></Structure>
 		<chartime>3</chartime>
-		<weight_inc>-0.109361</weight_inc>
+		<weight_inc>-1.20364</weight_inc>
 		<dopamine_plasticity_time>10</dopamine_plasticity_time>
 		<maxTSSISI>10</maxTSSISI>
-		<stability_resource_change_ratio>1.30805</stability_resource_change_ratio>
-		<minweight>-0.0108558</minweight>
-		<maxweight>2.00498</maxweight>
+		<stability_resource_change_ratio>0.752297</stability_resource_change_ratio>
+		<minweight>-1.5738</minweight>
+		<maxweight>1.22068</maxweight>
 		<three_factor_plasticity></three_factor_plasticity>
-		<nsilentsynapses>10</nsilentsynapses>
-		<hebbian_plasticity_chartime_ratio>3.59994</hebbian_plasticity_chartime_ratio>
+		<nsilentsynapses>8</nsilentsynapses>
+		<hebbian_plasticity_chartime_ratio>3.80619</hebbian_plasticity_chartime_ratio>
 	      </props>
 	    </Section>
 	    <Section name="WTA">
 	      <props>
-		<n>4</n>
+		<n>11</n>
 		<Structure type="O" dimension="1"></Structure>
 		<chartime>1</chartime>
 	      </props>
 	    </Section>
 	    <Section name="REWGATE">
 	      <props>
-		<n>4</n>
+		<n>11</n>
 		<Structure type="O" dimension="1"></Structure>
 		<chartime>1</chartime>
 	      </props>
@@ -69,8 +73,8 @@
 	    </Section>
 	    <Link from="R" to="L" type="plastic">
 	      <IniResource type="uni">
-		<min>0.011</min>
-		<max>0.011</max>
+		<min>3.603</min>
+		<max>3.603</max>
 	      </IniResource>
               <probability>1</probability>
 	      <maxnpre>1000</maxnpre>
@@ -85,13 +89,13 @@
 	      <weight>1</weight>
 	    </Link>
 	    <Link from="REWGATE" to="L" policy="aligned" type="reward">
-	      <weight>0.158111</weight>
+	      <weight>1.64057</weight>
 	    </Link>
 	    <Link from="WTA" to="OUT" policy="aligned">
 	      <weight>10</weight>
 	    </Link>
 	    <Link from="OUT" to="BIASGATE" policy="aligned" type="gating">
-	      <weight>-10</weight>
+	      <weight>-20</weight>   <!--It is 2 times greater than 10 (20 - default)-->
 	    </Link>
 	    <Link from="Target" to="REWGATE" policy="aligned">
 	      <weight>10</weight>
