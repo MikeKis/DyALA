@@ -16,25 +16,28 @@
     <Implementation lib="ping-pong-environment"></Implementation>
   </RECEPTORS>
   <RECEPTORS name="Actions" n="2">
-    <Implementation lib="ping-pong-environment"></Implementation>
-    <args>
-        <step>$(ACTIONSTEP)</step>
-    </args>
+    <Implementation lib="ping-pong-environment">
+    	<args>
+        	<step>$(ACTIONSTEP)</step>
+    	</args>
+    </Implementation>
   </RECEPTORS>
   <RECEPTORS name="SECPUN" n="1">
-    <Implementation lib="ping-pong-environment"></Implementation>
-    <args>
-	<state_change_delay>$(STATECHANGEDELAY)</state_change_delay>
-    </args>
+    <Implementation lib="ping-pong-environment">
+    	<args>
+		<state_change_delay>$(STATECHANGEDELAY)</state_change_delay>
+    	</args>
+    </Implementation>
   </RECEPTORS>
   <RECEPTORS name="SECREW" n="1">
     <Implementation lib="ping-pong-environment"></Implementation>
   </RECEPTORS>
   <RECEPTORS name="GrowingStimulation" n="30">
-    <Implementation lib="ping-pong-environment"></Implementation>
-    <args>
-        <maxidletime>$(MAXIDLETIME)</maxidletime>
-    </args>
+    <Implementation lib="ping-pong-environment">
+    	<args>
+        	<maxidletime>$(MAXIDLETIME)</maxidletime>
+    	</args>
+    </Implementation>
   </RECEPTORS>
   <NETWORK>
 	<Sections>
