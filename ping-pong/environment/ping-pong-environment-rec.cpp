@@ -321,7 +321,7 @@ bool bState(bool bRewardRequested)
             tactLastStateChange = -1000000;
             return false;
         }
-        double dy = -0.5 + (0.5 + curindxBall) / nSpatialZones;
+        double dy = -0.5 + (0.5 + curindyBall) / nSpatialZones;
         double dvx = curindvxBall == nVelocityZones / 2 ? 0. : curindvxBall < nVelocityZones / 2 ? -vr_VelocityZoneMedian[nVelocityZones / 2 - curindvxBall - 1] : vr_VelocityZoneMedian[curindvxBall - nVelocityZones / 2 - 1];
         if (dvx >= 0) {
             FormerState = -1;
@@ -470,7 +470,7 @@ RECEPTORS_SET_PARAMETERS(pchMyReceptorSectionName, nReceptors, xn)
             nReceptors = 2;
         else if (nReceptors != 2)
             throw std::runtime_error("Actions - wrong input node count");
-        return new Actions(atoi_s(xn.child_value("step")));
+        return new Actions(atof_s(xn.child_value("step")));
     } else if (!strcmp(pchMyReceptorSectionName, "SECPUN")) {
         if (nReceptors < 0)
             nReceptors = 1;
