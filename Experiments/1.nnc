@@ -1,117 +1,176 @@
 <?xml version="1.0" encoding="utf - 8"?>
 <SNN>
   <Global>0</Global>
-  <Global>0.00552501</Global>
+  <Global>0.227315</Global>
+
+    <!--NOT USED NOW-->
+
+  <RECEPTORS name="Punishment" n="1">
+    <Implementation lib="ping-pong-environment"></Implementation>
+  </RECEPTORS>
+  <RECEPTORS name="Reward" n="1">
+    <Implementation lib="ping-pong-environment"></Implementation>
+  </RECEPTORS>
+
   <RECEPTORS name="R" n="133">
+    <Implementation lib="ping-pong-environment"></Implementation>
+  </RECEPTORS>
+  <RECEPTORS name="Actions" n="2">
+    <Implementation lib="ping-pong-environment"></Implementation>
+    <args>
+        <step>0.00146938</step>
+    </args>
+  </RECEPTORS>
+  <RECEPTORS name="ManualStateEval" n="1">
+    <Implementation lib="ping-pong-environment"></Implementation>
+  </RECEPTORS>
+  <RECEPTORS name="GrowingStimulation" n="30">
+    <Implementation lib="ping-pong-environment"></Implementation>
+    <args>
+        <maxidletime>1794</maxidletime>
+    </args>
+  </RECEPTORS>
+  <RECEPTORS name="Constant" n="1">
     <Implementation lib="fromFile">
-      <args type="text">
-        <source>inpstaticperm.txt</source>
+      <args type="none">
+        <period>1</period>
+        <history_length>30000000</history_length>  <!--JUST VERY LONG-->
       </args>
     </Implementation>
   </RECEPTORS>
-  <RECEPTORS name="Target" n="1">
-    <Implementation lib="StateClassifier">
-      <args>
-        <target_file>inpstatictargetperm.txt</target_file>
-        <spike_period>1</spike_period>
-        <state_duration>20</state_duration>
-        <learning_time>748940</learning_time>
-	<no_class>0</no_class>
-	<criterion>averaged_F</criterion>
-	<sequential_test></sequential_test>
-	<prediction_file>tmp.csv</prediction_file>
-      </args>
-    </Implementation>
-  </RECEPTORS>
-<NETWORK ncopies="1">
-    <Sections>
-	    <Section name="L">
-	      <props>
-		<n>4</n>
-		<Structure type="O" dimension="1"></Structure>
-		<chartime>3</chartime>
-		<weight_inc>-0.109361</weight_inc>
-		<dopamine_plasticity_time>10</dopamine_plasticity_time>
-		<maxTSSISI>10</maxTSSISI>
-		<stability_resource_change_ratio>1.30805</stability_resource_change_ratio>
-		<minweight>-0.0108558</minweight>
-		<maxweight>2.00498</maxweight>
-		<three_factor_plasticity></three_factor_plasticity>
-		<nsilentsynapses>10</nsilentsynapses>
-		<hebbian_plasticity_chartime_ratio>3.59994</hebbian_plasticity_chartime_ratio>
-	      </props>
-	    </Section>
-	    <Section name="WTA">
-	      <props>
-		<n>4</n>
-		<Structure type="O" dimension="1"></Structure>
-		<chartime>1</chartime>
-	      </props>
-	    </Section>
-	    <Section name="REWGATE">
-	      <props>
-		<n>4</n>
-		<Structure type="O" dimension="1"></Structure>
-		<chartime>1</chartime>
-	      </props>
-	    </Section>
-	    <Section name="OUT">
-	      <props>
-		<n>1</n>
-		<chartime>1</chartime>
-	      </props>
-	    </Section>
-	    <Section name="BIASGATE">
-	      <props>
-		<n>1</n>
-		<chartime>1</chartime>
-	      </props>
-	    </Section>
-	    <Link from="R" to="L" type="plastic">
-	      <IniResource type="uni">
-		<min>0.011</min>
-		<max>0.011</max>
-	      </IniResource>
-              <probability>1</probability>
-	      <maxnpre>1000</maxnpre>
-	    </Link>
-	    <Link from="L" to="WTA" policy="aligned">
-	      <weight>9</weight>
-	    </Link>
-	    <Link from="WTA" to="WTA" policy="all-to-all-sections" type="gating">
-	      <weight>-10</weight>
-	    </Link>
-	    <Link from="WTA" to="REWGATE" policy="aligned" type="gating">
-	      <weight>1</weight>
-	    </Link>
-	    <Link from="REWGATE" to="L" policy="aligned" type="reward">
-	      <weight>0.158111</weight>
-	    </Link>
-	    <Link from="WTA" to="OUT" policy="aligned">
-	      <weight>10</weight>
-	    </Link>
-	    <Link from="OUT" to="BIASGATE" policy="aligned" type="gating">
-	      <weight>-10</weight>
-	    </Link>
-	    <Link from="Target" to="REWGATE" policy="aligned">
-	      <weight>10</weight>
-	    </Link>
-	    <Link from="Target" to="BIASGATE" policy="aligned">
-	      <weight>10</weight>
-	      <Delay type="uni">
-		<min>10</min>
-		<max>10</max>
-	      </Delay>
-	    </Link>
-	    <Link from="Target" to="BIASGATE" policy="exclusive">
-	      <weight>-30</weight>
-	    </Link>
-	    <Link from="BIASGATE" to="L" policy="aligned">
-	      <weight>3</weight>
-	    </Link>
-    </Sections>
-</NETWORK>
-  <Readout lib="StateClassifier">
-    <output>OUT</output>
+  <NETWORK>
+	<Sections>
+	  <Section name="BadState">
+	    <props>
+	      <n>1</n>
+	    </props>
+	  </Section>
+	  <Section name="SECREW">
+	    <props>
+	      <n>1</n>
+	      <chartime>3</chartime>
+	      <threshold_decay_period>2211</threshold_decay_period>
+	      <threshold_inc>6.02774</threshold_inc>
+	      <minpotential>6.29233</minpotential>
+	    </props>
+	  </Section>
+	  <Section name="SECPUN">
+	    <props>
+	      <n>1</n>
+	      <chartime>3</chartime>
+	      <threshold_decay_period>2211</threshold_decay_period>
+	      <threshold_inc>6.02774</threshold_inc>
+	      <minpotential>-6.29233</minpotential>
+	    </props>
+	  </Section>
+	  <Section name="L">
+	    <props>
+	      <n>6</n>
+	      <Structure type="W"></Structure>   <!--only antagonistic actions-->
+	      <chartime>6</chartime>
+	      <three_factor_plasticity></three_factor_plasticity>
+	      <threshold_decay_period>6</threshold_decay_period>
+	      <threshold_inc>0</threshold_inc>
+	      <weight_inc>0</weight_inc>
+	      <dopamine_plasticity_time>16</dopamine_plasticity_time>
+	      <minweight>-0.0219718</minweight>
+	      <maxweight>0.582542</maxweight>
+	      <stability_resource_change_ratio>9.7757</stability_resource_change_ratio>
+	      <nsilentsynapses>9</nsilentsynapses>
+<!--MIGRATION-->
+    	      <migration>SAME_PLACE</migration>
+<!--/MIGRATION-->
+	    </props>
+	  </Section>
+	  <Section name="GATEREW">
+	    <props>
+	      <n>2</n>
+	    </props>
+	  </Section>
+	  <Section name="GATEPUN">
+	    <props>
+	      <n>2</n>
+	    </props>
+	  </Section>
+	  <Link from="ManualStateEval" to="BadState" type="gating" policy="all-to-all">
+	  	<weight>-20</weight>
+	  </Link>
+	  <Link from="Constant" to="BadState" policy="all-to-all">
+	  	<weight>10</weight>
+	  </Link>
+	  <Link from="ManualStateEval" to="SECREW" policy="all-to-all">
+	  	<weight>-10</weight>
+	      	<Delay type="uni">
+			<min>20</min>
+			<max>20</max>
+	      	</Delay>
+	  </Link>
+	  <Link from="BadState" to="SECREW" policy="all-to-all">
+	  	<weight>3.58958</weight>
+	      	<Delay type="uni">
+			<min>27</min>
+			<max>27</max>
+	      	</Delay>
+	  </Link>
+	  <Link from="ManualStateEval" to="SECREW" policy="all-to-all">
+	  	<weight>3.58958</weight>
+	  </Link>
+	  <Link from="BadState" to="SECREW" policy="all-to-all">
+	  	<weight>-10</weight>
+	  </Link>
+	  <Link from="BadState" to="SECPUN" policy="all-to-all">
+	  	<weight>-10</weight>
+	      	<Delay type="uni">
+			<min>20</min>
+			<max>20</max>
+	      	</Delay>
+	  </Link>
+	  <Link from="ManualStateEval" to="SECPUN" policy="all-to-all">
+	  	<weight>3.58958</weight>
+	      	<Delay type="uni">
+			<min>27</min>
+			<max>27</max>
+	      	</Delay>
+	  </Link>
+	  <Link from="BadState" to="SECPUN" policy="all-to-all">
+	  	<weight>3.58958</weight>
+	  </Link>
+	  <Link from="ManualStateEval" to="SECPUN" policy="all-to-all">
+	  	<weight>-10</weight>
+	  </Link>
+	  <Link from="R" to="L" type="plastic" policy="all-to-all">
+		  <IniResource type="uni">
+		    <min>0.023</min>
+		    <max>0.023</max>
+		  </IniResource>
+	  </Link>
+	  <Link from="L" to="L" type="gating">
+	  	<weight>-25</weight>
+	  </Link>
+	  <Link from="GrowingStimulation" to="L" policy="all-to-all">
+	  	<weight>0.3</weight>
+	  </Link>
+	  <Link from="SECPUN" to="GATEPUN" policy="all-to-all">
+	  	<weight>10</weight>
+	  </Link>
+	  <Link from="SECREW" to="GATEREW" policy="all-to-all">
+	  	<weight>10</weight>
+	  </Link>
+	  <Link from="GATEREW" to="L" type="reward" policy="aligned">
+	    <weight>1</weight>
+	  </Link>
+	  <Link from="GATEPUN" to="L" type="reward" policy="aligned">
+	    <weight>-2.92114</weight>
+	  </Link>
+	  <Link from="Actions" to="GATEREW" type="gating" policy="aligned">
+	    <weight>92</weight>
+	  </Link>
+	  <Link from="Actions" to="GATEPUN" type="gating" policy="aligned">
+	    <weight>92</weight>
+	  </Link>
+	</Sections>
+  </NETWORK>
+  <Readout lib="ping-pong-environment">
+    <output>L</output>
   </Readout>
 </SNN>
