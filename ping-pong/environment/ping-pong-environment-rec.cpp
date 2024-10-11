@@ -389,8 +389,9 @@ public:
 
 class DYNAMIC_LIBRARY_EXPORTED_CLASS GrowingStimulation: public IReceptors
 {
-    int ActivityTime = 0;
-    int maxIdleTime = 0;
+    int  ActivityTime;
+    int  maxIdleTime;
+    bool bh;
 protected:
     virtual void GetMeanings(VECTOR<STRING> &vstr_Meanings) const override
     {
@@ -399,18 +400,33 @@ protected:
             vstr_Meanings[_i] = "sti" + str(_i);
     }
 public:
-    GrowingStimulation(int nrec, const pugi::xml_node &xn): ActivityTime(0)
+    GrowingStimulation(int nrec, const pugi::xml_node &xn)
     {
-        if (nrec > 32) {
+        if (nrec / 2 > 32) {
             cout << "ping-pong -- Too many stimulating nodes\n";
             exit(-1);
         }
         maxIdleTime = atoi_s(xn.child_value("maxidletime"));
+        reset();
     }
     virtual bool bGenerateSignals(unsigned *pfl, int bitoffset) override
     {
-        *pfl = ActivityTime < 0 ? 0 : ActivityTime < 31 ? (1 << (ActivityTime + 1)) - 1 : 0xffffffff;
+        size_t *pfl64 = (size_t *)pfl;   // SAFE BECAUSE OF 64 BIT RECEPTOR ALIGNMENT!
         ++ActivityTime;
+        if (ActivityTime < 0)
+            *pfl64 = 0;
+        else {
+            if (!ActivityTime)
+                bh = rng() > 0.5;
+            if (ActivityTime < GetNReceptors() / 2) {
+                *pfl64 = (1 << (ActivityTime + 1)) - 1;
+                if (bh)
+                    *pfl64 <<= GetNReceptors() / 2;
+            } else {
+                *pfl64 = 0;
+                ActivityTime = -1;
+            }
+        }
         return true;
     }
     virtual void Randomize(void) override {};
@@ -430,8 +446,10 @@ GrowingStimulation *pgsG = NULL;
 
 bool Actions::bGenerateSignals(unsigned *pfl, int bitoffset)
 {
-    if (rPastRY != vr_CurrentPhaseSpacePoint[4])
+    if (rPastRY != vr_CurrentPhaseSpacePoint[4]) {
+//        printf("%d,%f,%f\n", ntact, rPastRY, vr_CurrentPhaseSpacePoint[4]);
         pgsG->reset();
+    }
     *pfl = 0;
     if (rPastRY == BIGREALNUMBER)
         rPastRY = vr_CurrentPhaseSpacePoint[4];
