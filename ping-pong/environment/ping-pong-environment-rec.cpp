@@ -38,16 +38,15 @@ int nRewardsTot = 0;
 int nPunishmentsTot = 0;
 int InputBlockCounter = 0;
 
+enum evaluation_type
+{
+    reward,
+    punishment,
+};
+
 class DYNAMIC_LIBRARY_EXPORTED_CLASS Evaluator: public IReceptors
 {
-public:
-    enum type
-    {
-        reward,
-        punishment,
-    };
-private:
-    enum Evaluator::type typ;
+    enum evaluation_type typ;
     int                  TrainCounter = 0;
     int                  PeriodCounter;
 
@@ -56,9 +55,9 @@ protected:
     {
             vstr_Meanings.resize(1);
             vstr_Meanings.front() = typ == reward ? "REW" : "PUN";
-            }
+    }
 public:
-    Evaluator(enum Evaluator::type t, size_t tactbeg = 0) : typ(t) {}
+    Evaluator(enum evaluation_type t) : typ(t) {}
     virtual bool bGenerateSignals(unsigned *pfl, int bitoffset) override
     {
         switch (typ) {
@@ -290,9 +289,14 @@ public:
     }
 };
 
-bool bGoodState()
+int StateChangeDelay = 0;
+
+bool bState(bool bRewardRequested)
 {
     static vector<float> vr_VelocityZoneMedian;
+    static int tactLastStateChange = -1000000;
+    static bool bLastChangetoGood;
+    static int FormerState = -1;
     if (vr_VelocityZoneMedian.empty()) {
         vector<float> vr_samples(9000, 0.F);
         for (auto &i: vr_samples) {
@@ -305,72 +309,89 @@ bool bGoodState()
         FORI(vr_VelocityZoneMedian.size())
             vr_VelocityZoneMedian[_i] = vr_samples[(_i + 1) * 2 * vr_samples.size() / 9];
     }
-    if (curindxBall < 0)
-        return false;
-    double dx = -0.5 + (0.5 + curindxBall) / nSpatialZones;
-    if (curindyBall < 0)
-        return false;
-    double dy = -0.5 + (0.5 + curindxBall) / nSpatialZones;
-    if (curindvxBall < 0)
-        return false;
-    double dvx = curindvxBall == nVelocityZones / 2 ? 0. : curindvxBall < nVelocityZones / 2 ? -vr_VelocityZoneMedian[nVelocityZones / 2 - curindvxBall - 1] : vr_VelocityZoneMedian[curindvxBall - nVelocityZones / 2 - 1];
-    if (!dvx)
-        return false;
-    if (curindvyBall < 0)
-        return false;
-    double dvy = curindvyBall == nVelocityZones / 2 ? 0. : curindvyBall < nVelocityZones / 2 ? -vr_VelocityZoneMedian[nVelocityZones / 2 - curindvyBall - 1] : vr_VelocityZoneMedian[curindvyBall - nVelocityZones / 2 - 1];
-    if (curindRacket < 0)
-        return false;
-    double dry = -0.5 + (0.5 + curindRacket) / nSpatialZones;
-    if (dvx > 0) {
-        dy += (0.5 - dx) * dvy / dvx;
-        dx = 0.5;
-        dvx = -dvx;
-    }
-    double ddx = dx + 0.5;
-    double dyint = dy - ddx * dvy / dvx + 0.5;
-    dyint -= floor(dyint / 2) * 2;
-    dry += 0.5;
-    if (dry - RACKET_SIZE / 2 < dyint && dyint < dry + RACKET_SIZE / 2)
-        return true;
-    else {
-        dry = 2 - dry;
+    if (!bRewardRequested) {   // punishment is requested first
+        if (curindxBall < 0 || curindyBall < 0 || curindvxBall < 0 || curindvyBall < 0 || curindRacket < 0) {
+            FormerState = -1;
+            tactLastStateChange = -1000000;
+            return false;
+        }
+        double dx = -0.5 + (0.5 + curindxBall) / nSpatialZones;
+        if (dx >= 0) {
+            FormerState = -1;
+            tactLastStateChange = -1000000;
+            return false;
+        }
+        double dy = -0.5 + (0.5 + curindyBall) / nSpatialZones;
+        double dvx = curindvxBall == nVelocityZones / 2 ? 0. : curindvxBall < nVelocityZones / 2 ? -vr_VelocityZoneMedian[nVelocityZones / 2 - curindvxBall - 1] : vr_VelocityZoneMedian[curindvxBall - nVelocityZones / 2 - 1];
+        if (dvx >= 0) {
+            FormerState = -1;
+            tactLastStateChange = -1000000;
+            return false;
+        }
+        double dvy = curindvyBall == nVelocityZones / 2 ? 0. : curindvyBall < nVelocityZones / 2 ? -vr_VelocityZoneMedian[nVelocityZones / 2 - curindvyBall - 1] : vr_VelocityZoneMedian[curindvyBall - nVelocityZones / 2 - 1];
+        double dry = -0.5 + (0.5 + curindRacket) / nSpatialZones;
+        if (dvx > 0) {  // retain it!
+            dy += (0.5 - dx) * dvy / dvx;
+            dx = 0.5;
+            dvx = -dvx;
+        }
+        double ddx = dx + 0.5;
+        double dyint = dy - ddx * dvy / dvx + 0.5;
+        dyint -= floor(dyint / 2) * 2;
+        dry += 0.5;
+        int CurrentState;
         if (dry - RACKET_SIZE / 2 < dyint && dyint < dry + RACKET_SIZE / 2)
-            return true;
+            CurrentState = 0;
+        else {
+            dry = 2 - dry;
+            CurrentState = dry - RACKET_SIZE / 2 < dyint && dyint < dry + RACKET_SIZE / 2 ? 0 : 1;
+        }
+        if (FormerState != -1 && FormerState != CurrentState) {
+            if (ntact - tactLastStateChange > StateChangeDelay) {
+                tactLastStateChange = ntact;
+                bLastChangetoGood = !CurrentState;
+            } else tactLastStateChange = -1000000;
+        }
+        FormerState = CurrentState;
     }
-    return false;
+    return ntact - tactLastStateChange == StateChangeDelay && bLastChangetoGood == bRewardRequested;
 }
 
-class DYNAMIC_LIBRARY_EXPORTED_CLASS ManualStateClassifier: public IReceptors
+class DYNAMIC_LIBRARY_EXPORTED_CLASS SecondaryEvaluator: public IReceptors
 {
+    bool bReward;
 protected:
-    virtual void GetMeanings(VECTOR<STRING> &vstr_Meanings) const override
+    virtual void GetMeanings(VECTOR<STRING>& vstr_Meanings) const override
     {
         vstr_Meanings.resize(1);
-        vstr_Meanings[0] = "GoodState";
+        vstr_Meanings.front() = bReward ? "SECREW" : "SECPUN";
     }
 public:
-    virtual bool bGenerateSignals(unsigned *pfl, int bitoffset) override
+    SecondaryEvaluator(bool brew) : bReward(brew) {}
+    virtual bool bGenerateSignals(unsigned* pfl, int bitoffset) override
     {
-        *pfl = bGoodState() ? 1 : 0;
+        *pfl = bState(bReward);
         return true;
     }
     virtual void Randomize(void) override {};
-    virtual void SaveStatus(Serializer &ser) const override
+    virtual void SaveStatus(Serializer& ser) const override
     {
         IReceptors::SaveStatus(ser);
+        ser << bReward;
     }
-    virtual ~ManualStateClassifier() = default;
-    void LoadStatus(Serializer &ser)
+    virtual ~SecondaryEvaluator() = default;
+    void LoadStatus(Serializer& ser)
     {
         IReceptors::LoadStatus(ser);
+        ser >> bReward;
     }
 };
 
 class DYNAMIC_LIBRARY_EXPORTED_CLASS GrowingStimulation: public IReceptors
 {
-    int ActivityTime = 0;
-    int maxIdleTime = 0;
+    int  ActivityTime;
+    int  maxIdleTime;
+    bool bh;
 protected:
     virtual void GetMeanings(VECTOR<STRING> &vstr_Meanings) const override
     {
@@ -379,18 +400,33 @@ protected:
             vstr_Meanings[_i] = "sti" + str(_i);
     }
 public:
-    GrowingStimulation(int nrec, const pugi::xml_node &xn): ActivityTime(0)
+    GrowingStimulation(int nrec, const pugi::xml_node &xn)
     {
-        if (nrec > 32) {
+        if (nrec / 2 > 32) {
             cout << "ping-pong -- Too many stimulating nodes\n";
             exit(-1);
         }
         maxIdleTime = atoi_s(xn.child_value("maxidletime"));
+        reset();
     }
     virtual bool bGenerateSignals(unsigned *pfl, int bitoffset) override
     {
-        *pfl = ActivityTime < 0 ? 0 : ActivityTime < 31 ? (1 << (ActivityTime + 1)) - 1 : 0xffffffff;
+        size_t *pfl64 = (size_t *)pfl;   // SAFE BECAUSE OF 64 BIT RECEPTOR ALIGNMENT!
         ++ActivityTime;
+        if (ActivityTime < 0)
+            *pfl64 = 0;
+        else {
+            if (!ActivityTime)
+                bh = rng() > 0.5;
+            if (ActivityTime < GetNReceptors() / 2) {
+                *pfl64 = (1 << (ActivityTime + 1)) - 1;
+                if (bh)
+                    *pfl64 <<= GetNReceptors() / 2;
+            } else {
+                *pfl64 = 0;
+                ActivityTime = -1;
+            }
+        }
         return true;
     }
     virtual void Randomize(void) override {};
@@ -410,8 +446,10 @@ GrowingStimulation *pgsG = NULL;
 
 bool Actions::bGenerateSignals(unsigned *pfl, int bitoffset)
 {
-    if (rPastRY != vr_CurrentPhaseSpacePoint[4])
+    if (rPastRY != vr_CurrentPhaseSpacePoint[4]) {
+//        printf("%d,%f,%f\n", ntact, rPastRY, vr_CurrentPhaseSpacePoint[4]);
         pgsG->reset();
+    }
     *pfl = 0;
     if (rPastRY == BIGREALNUMBER)
         rPastRY = vr_CurrentPhaseSpacePoint[4];
@@ -432,13 +470,13 @@ RECEPTORS_SET_PARAMETERS(pchMyReceptorSectionName, nReceptors, xn)
             nReceptors = 1;
         else if (nReceptors != 1)
             throw std::runtime_error("Punishment - wrong input node count");
-        return new Evaluator(Evaluator::punishment);
+        return new Evaluator(punishment);
     } else if (!strcmp(pchMyReceptorSectionName, "Reward")) {
         if (nReceptors < 0)
             nReceptors = 1;
         else if (nReceptors != 1)
             throw std::runtime_error("Reward - wrong input node count");
-        return new Evaluator(Evaluator::reward);
+        return new Evaluator(reward);
     } else if (!strcmp(pchMyReceptorSectionName, "R")) {
         if (nReceptors < 0)
             nReceptors = nInputs;
@@ -450,13 +488,20 @@ RECEPTORS_SET_PARAMETERS(pchMyReceptorSectionName, nReceptors, xn)
             nReceptors = 2;
         else if (nReceptors != 2)
             throw std::runtime_error("Actions - wrong input node count");
-        return new Actions(atoi_s(xn.child_value("step")));
-    } else if (!strcmp(pchMyReceptorSectionName, "ManualStateEval")) {
+        return new Actions(atof_s(xn.child_value("step")));
+    } else if (!strcmp(pchMyReceptorSectionName, "SECPUN")) {
         if (nReceptors < 0)
             nReceptors = 1;
         else if (nReceptors != 1)
-            throw std::runtime_error("ManualStateEval - wrong input node count");
-        return new ManualStateClassifier;
+            throw std::runtime_error("SECPUN - wrong input node count");
+        StateChangeDelay = atoi_s(xn.child_value("state_change_delay"));
+        return new SecondaryEvaluator(false);
+    } else if (!strcmp(pchMyReceptorSectionName, "SECREW")) {
+        if (nReceptors < 0)
+            nReceptors = 1;
+        else if (nReceptors != 1)
+            throw std::runtime_error("SECREW - wrong input node count");
+        return new SecondaryEvaluator(true);
     } else if (!strcmp(pchMyReceptorSectionName, "GrowingStimulation"))
         return pgsG = new GrowingStimulation(nReceptors, xn);
     else {
@@ -474,10 +519,10 @@ PING_PONG_ENVIRONMENT_EXPORT IReceptors *LoadStatus(Serializer &ser)
 		case 0: prpp = new rec_ping_pong;
 				prpp->LoadStatus(ser);
 				return prpp;
-		case 1: peva = new Evaluator(Evaluator::punishment);
+		case 1: peva = new Evaluator(punishment);
 				peva->LoadStatus(ser);
 				return peva;
-		case 2: peva = new Evaluator(Evaluator::reward);
+		case 2: peva = new Evaluator(reward);
 				peva->LoadStatus(ser);
 				return peva;
 //		case 3: papG = new AdaptivePoisson(true);
