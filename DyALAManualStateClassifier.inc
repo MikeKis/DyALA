@@ -28,7 +28,7 @@ CHROMOSOME_DEFINITION
 {
     INITIALIZE_GENE(THRESHOLDWINC, rng()),
     INITIALIZE_GENE(ACTIONSTEP, rng.logUniform(0.001, 0.1)),   // racket sfift causing ACTIONS firing
-    INITIALIZE_GENE(MAXIDLETIME, rng.logUniform(300, 30000)),  // no-action time after which external stimalation is switched on
+    INITIALIZE_GENE(MAXIDLETIME, rng.logUniform(300, 3000)),  // no-action time after which external stimalation is switched on
     INITIALIZE_GENE(NNEURONSPERACTION, rng.logUniform(1, 30)),
     INITIALIZE_GENE(LCHARTIME, rng.logUniform(1, 30)),
     INITIALIZE_GENE(LTHRESHOLDDECAYPERIOD, rng.logUniform(1, 3000)),
@@ -106,6 +106,7 @@ EVALUATOR
     SUBVINT(LATERALBLOCKINGTIME);
     SUBV(RELPUNEFFECT);
     SUBVINT(ACTIONEVALUATIONTIME);
+    SUBVINT(NNEURONSPERACTION);
 
     if (V(MIGRATION) < 0.5)
         EXCLUDESECTION("MIGRATION");
