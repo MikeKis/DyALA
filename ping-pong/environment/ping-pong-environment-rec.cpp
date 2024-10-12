@@ -316,20 +316,25 @@ bool bState(bool bRewardRequested)
             return false;
         }
         double dx = -0.5 + (0.5 + curindxBall) / nSpatialZones;
+                    dx = vr_CurrentPhaseSpacePoint[0];
         if (dx >= 0) {
             FormerState = -1;
             tactLastStateChange = -1000000;
             return false;
         }
         double dy = -0.5 + (0.5 + curindyBall) / nSpatialZones;
+                    dy = vr_CurrentPhaseSpacePoint[1];
         double dvx = curindvxBall == nVelocityZones / 2 ? 0. : curindvxBall < nVelocityZones / 2 ? -vr_VelocityZoneMedian[nVelocityZones / 2 - curindvxBall - 1] : vr_VelocityZoneMedian[curindvxBall - nVelocityZones / 2 - 1];
+                    dvx = vr_CurrentPhaseSpacePoint[2];
         if (dvx >= 0) {
             FormerState = -1;
             tactLastStateChange = -1000000;
             return false;
         }
         double dvy = curindvyBall == nVelocityZones / 2 ? 0. : curindvyBall < nVelocityZones / 2 ? -vr_VelocityZoneMedian[nVelocityZones / 2 - curindvyBall - 1] : vr_VelocityZoneMedian[curindvyBall - nVelocityZones / 2 - 1];
+                    dvy = vr_CurrentPhaseSpacePoint[3];
         double dry = -0.5 + (0.5 + curindRacket) / nSpatialZones;
+                    dry = vr_CurrentPhaseSpacePoint[4];
         if (dvx > 0) {  // retain it!
             dy += (0.5 - dx) * dvy / dvx;
             dx = 0.5;
