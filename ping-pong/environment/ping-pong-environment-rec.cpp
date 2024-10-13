@@ -451,19 +451,17 @@ GrowingStimulation *pgsG = NULL;
 
 bool Actions::bGenerateSignals(unsigned *pfl, int bitoffset)
 {
-    if (rPastRY != vr_CurrentPhaseSpacePoint[4]) {
-//        printf("%d,%f,%f\n", ntact, rPastRY, vr_CurrentPhaseSpacePoint[4]);
-        pgsG->reset();
-    }
     *pfl = 0;
     if (rPastRY == BIGREALNUMBER)
         rPastRY = vr_CurrentPhaseSpacePoint[4];
     else if (vr_CurrentPhaseSpacePoint[4] < rPastRY - rStep) {
         *pfl = 1;
         rPastRY = vr_CurrentPhaseSpacePoint[4];
+        pgsG->reset();
     } else if (vr_CurrentPhaseSpacePoint[4] > rPastRY + rStep) {
         *pfl = 2;
         rPastRY = vr_CurrentPhaseSpacePoint[4];
+        pgsG->reset();
     }
     return true;
 }
