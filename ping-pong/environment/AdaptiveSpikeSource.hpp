@@ -1,12 +1,15 @@
 #ifndef ADAPTIVESPIKESOURCE_HPP
 #define ADAPTIVESPIKESOURCE_HPP
 
+
+const float rStateFiringFrequency = 0.75F;
+
 class AdaptiveSpikeSource
 {
-    int LastTactinThisState;
+//    int LastTactinThisState;
     float rCurrentFrequency;
 public:
-    AdaptiveSpikeSource(): LastTactinThisState(-2) {}
+    AdaptiveSpikeSource(): rCurrentFrequency(rStateFiringFrequency) {}
     bool bFire();
 };
 

@@ -4,13 +4,11 @@
 extern int ntact;
 extern RandomNumberGenerator rng;
 
-float rStateFiringFrequency = 0.25F;
-
 bool AdaptiveSpikeSource::bFire()
 {
-    if (LastTactinThisState < ntact - 1)
-        rCurrentFrequency = rStateFiringFrequency;
+//    if (LastTactinThisState < ntact - 1)
+//        rCurrentFrequency = rStateFiringFrequency;
     bool bret = rng() < rCurrentFrequency;
-    LastTactinThisState = ntact;
+//    LastTactinThisState = ntact;
     return bret;
 }
