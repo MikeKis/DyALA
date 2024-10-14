@@ -108,6 +108,7 @@ int curindyBall = -1;
 int curindvxBall = -1;
 int curindvyBall = -1;
 int curindRacket = -1;
+bool bCurrentStateOK = false;
 
 class DYNAMIC_LIBRARY_EXPORTED_CLASS rec_ping_pong: public IReceptors
 {
@@ -358,6 +359,7 @@ bool bState(bool bRewardRequested)
             } else tactLastStateChange = -1000000;
         }
         FormerState = CurrentState;
+        bCurrentStateOK = !CurrentState;
     }
     return ntact - tactLastStateChange == StateChangeDelay && bLastChangetoGood == bRewardRequested;
 }
