@@ -25,6 +25,7 @@ extern int LastRegistration;
 extern int PostRewardCounter;
 extern int nRecognitions;
 extern int nCorr;
+extern bool bCurrentStateOK;
 
 int nNeuronsperAction = 0;
 
@@ -40,7 +41,7 @@ PING_PONG_ENVIRONMENT_EXPORT bool ObtainOutputSpikes(const vector<int> &v_Firing
 {
 	static int NoMoveTacts = 0;
 	int nCommandsDown = count_if(v_Firing.begin(), v_Firing.end(), bind2nd(less<int>(), nNeuronsperAction));
-	auto r = rAction * ((int)v_Firing.size() - 2 * nCommandsDown);
+	auto r = !bCurrentStateOK ? rAction * ((int)v_Firing.size() - 2 * nCommandsDown) : 0.F;
 	auto rsav = *es.prRacket;
 	*es.prRacket += r;
 	if (*es.prRacket > 0.5F - RACKET_SIZE / 2)

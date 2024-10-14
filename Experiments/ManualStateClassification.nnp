@@ -72,11 +72,6 @@
 	      <n>2</n>
 	    </props>
 	  </Section>
-	  <Section name="GATEPUN">
-	    <props>
-	      <n>2</n>
-	    </props>
-	  </Section>
 	  <Link from="R" to="L" type="plastic" policy="all-to-all">
 		  <IniResource type="uni">
 		    <min>$(INIRESOURCE0)</min>
@@ -89,22 +84,13 @@
 	  <Link from="GrowingStimulation" to="L" policy="all-to-all-sections">
 	  	<weight>0.3</weight>
 	  </Link>
-	  <Link from="SECPUN" to="GATEPUN" policy="all-to-all">
-	  	<weight>10</weight>
-	  </Link>
 	  <Link from="SECREW" to="GATEREW" policy="all-to-all">
 	  	<weight>10</weight>
 	  </Link>
 	  <Link from="GATEREW" to="L" type="reward" policy="aligned">
 	    <weight>1</weight>
 	  </Link>
-	  <Link from="GATEPUN" to="L" type="reward" policy="aligned">
-	    <weight>-$(RELPUNEFFECT)</weight>
-	  </Link>
 	  <Link from="Actions" to="GATEREW" type="gating" policy="aligned">
-	    <weight>$(ACTIONEVALUATIONTIME)</weight>
-	  </Link>
-	  <Link from="Actions" to="GATEPUN" type="gating" policy="aligned">
 	    <weight>$(ACTIONEVALUATIONTIME)</weight>
 	  </Link>
 	</Sections>
