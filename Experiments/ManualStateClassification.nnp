@@ -97,5 +97,8 @@
   </NETWORK>
   <Readout lib="ping-pong-environment">
     <output>L</output>
+    <args>
+	<start_time>$(STIMULATIONTIME)</start_time>
+    </args>
   </Readout>
 </SNN>  

@@ -420,7 +420,7 @@ public:
     {
         size_t *pfl64 = (size_t *)pfl;   // SAFE BECAUSE OF 64 BIT RECEPTOR ALIGNMENT!
         ++ActivityTime;
-        if (ActivityTime < 0)
+        if (ActivityTime < 0 || ntact >= tactStart)
             *pfl64 = 0;
         else {
             if (!ActivityTime)
