@@ -5,6 +5,7 @@
 //------------------------------------------------------------------------------------------------
 // $$$ COMMON DEFINES
 #define MAXEMULATIONTIME 2000000
+#define STIMULATIONTIME 1000000
 #define NINPUTS 133
 #define NTESTS 3
 #define SECOND_TEST_THRESHOLD 0x7fffffff   // DO NOT USE PROTOCOL POSTPROCESSOR !!
@@ -86,6 +87,8 @@ EVALUATOR
     SETNNP(".." FOLDER_SEPARATOR "Experiments" FOLDER_SEPARATOR "ManualStateClassification.nnp");
 //------------------------------------------------------------------------------------------------
 // $$$ SUBSTITUTE ALL VALUES
+
+   SUBMACRO(STIMULATIONTIME);
 
     SUBVALUE("NNEU", nint(V(NNEURONSPERACTION)) * 2);
     SUBVALUE("INIRESOURCE0", rWeight0Resource(-V(MINWEIGHT), V(MAXWEIGHT)));
