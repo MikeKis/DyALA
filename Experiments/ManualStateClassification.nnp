@@ -25,7 +25,7 @@
   <RECEPTORS name="SECPUN" n="1">
     <Implementation lib="ping-pong-environment">
     	<args>
-		<state_change_delay>$(STATECHANGEDELAY)</state_change_delay>
+		<state_change_delay>1</state_change_delay>
     	</args>
     </Implementation>
   </RECEPTORS>
