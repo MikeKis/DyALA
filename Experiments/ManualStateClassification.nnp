@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <SNN>
   <Global>0</Global>
-  <Global>$(THRESHOLDWINC)</Global>
+  <Global>0</Global>
 
     <!--NOT USED NOW-->
 
@@ -25,7 +25,7 @@
   <RECEPTORS name="SECPUN" n="1">
     <Implementation lib="ping-pong-environment">
     	<args>
-		<state_change_delay>$(STATECHANGEDELAY)</state_change_delay>
+		<state_change_delay>1</state_change_delay>
     	</args>
     </Implementation>
   </RECEPTORS>
@@ -58,13 +58,10 @@
 	      <threshold_inc>$(LTHRESHOLDINC)</threshold_inc>
 	      <weight_inc>0</weight_inc>
 	      <dopamine_plasticity_time>$(PLASTICITYTIME)</dopamine_plasticity_time>
-	      <minweight>-$(MINWEIGHT)</minweight>
+	      <minweight>0</minweight>
 	      <maxweight>$(MAXWEIGHT)</maxweight>
 	      <stability_resource_change_ratio>$(STABILITYRESOURCECHANGERATIO)</stability_resource_change_ratio>
-	      <nsilentsynapses>$(NSILENTSYNAPSES)</nsilentsynapses>
-<!--MIGRATION-->
-    	      <migration>SAME_PLACE</migration>
-<!--/MIGRATION-->
+	      <nsilentsynapses>0</nsilentsynapses>
 	    </props>
 	  </Section>
 	  <Section name="GATEREW">
@@ -74,8 +71,8 @@
 	  </Section>
 	  <Link from="R" to="L" type="plastic" policy="all-to-all">
 		  <IniResource type="uni">
-		    <min>$(INIRESOURCE0)</min>
-		    <max>$(INIRESOURCE0)</max>
+		    <min>0</min>
+		    <max>0</max>
 		  </IniResource>
 	  </Link>
 	  <Link from="L" to="L" type="gating" policy="all-to-all">
