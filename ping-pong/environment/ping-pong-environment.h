@@ -22,13 +22,14 @@ typedef unsigned __int64 UNS64;
 #endif
 
 const unsigned nSpatialZones = 30;
-const int nVelocityZones = 9;
+const int nVelocityZones = 10;
 const int nRelPos = 5;
 const float rRelPosStep = RACKET_SIZE / 3;   // Racket takes 3 middle positions of the nRelPos x nRelPos grid.
 const unsigned nInputs = 3 * nSpatialZones + 2 * nVelocityZones + nRelPos * nRelPos;
 
 void UpdateWorld(std::vector<float> &vr_PhaseSpacePoint);
 float rMakeBallVelocity(void);
+std::pair<float, float> prr_MakeBallVelocity(bool bPunishment);
 
 class RandomNumberGenerator
 {
