@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.14)
 # set(CMAKE_CXX_COMPILER "/usr/bin/g++")
-set(CMAKE_CXX_STANDARD 14)
+#set(CMAKE_CXX_STANDARD 14)
 
 project(ping-pong-environment CXX)
 
@@ -12,7 +12,6 @@ add_library(${PROJECT_NAME} SHARED
   EnvironmentState.cpp
   ping-pong-environment.h
   EnvironmentState.hpp
-  ../../pugixml-1.10/src/pugixml.cpp
 )
 
 set(ROOT_NAMESPACE ping-pong-environment)
@@ -37,7 +36,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 
 target_compile_options(${PROJECT_NAME} PRIVATE
             -fPIC
-	    -std=c++14
+#	    -std=c++14
             )
 
 #target_link_options(${PROJECT_NAME} PRIVATE
@@ -50,6 +49,9 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
         boost_thread
 	pthread
 	rt
+        DTRF
+        ArNI
+        DatTab
         )
 
                        

@@ -14,6 +14,8 @@ Emulates ping-pong game.
 #include <sstream>
 #include <memory>
 
+#include <ArNI/../helpers/DatTab/RF/RF.h>
+
 #include "EnvironmentState.hpp"
 
 //#define EXACT_STATE_EVALUATION
@@ -120,9 +122,37 @@ bool bCurrentStateOK = false;
 float rIntensityFactor = 0.7;
 
 deque<pair<int, int> > aqpind_[5];   // for manual state classification
+deque<pair<int, int> > qpind_all;   // for RF state classification
 const int SpikeQueueDepth_tacts = 10;
+const int AllSpikeQueueDepth_tacts = 30;
+const int ModelRecreationPeriod_tacts = 210000;
+DatTab dt(nInputs);
+RF rf;
+RFPar rfp;
+RFRes *prfr = NULL;
 
 vector<unique_ptr<DoGEncoder> > vupdog_(phase_space_dimension);
+
+int State(double dxball, double dyball, double dvxball, double dvyball, double dyracket)
+{
+    if (dxball >= 0)
+        return -1;
+    if (dvxball >= 0)
+        return -1;
+//    if (dvx > 0) {  // retain it!
+//        dy += (0.5 - dx) * dvy / dvx;
+//        dx = 0.5;
+//        dvx = -dvx;
+//    }
+    double ddx = dxball + 0.5;
+    double dyint = dyball - ddx * dvyball / dvxball + 0.5;
+    dyint -= floor(dyint / 2) * 2;
+    double d = dyracket + 0.5;
+    if (d - RACKET_SIZE / 2 < dyint && dyint < d + RACKET_SIZE / 2)
+        return 0;
+    d = 2 - d;
+    return d - RACKET_SIZE / 2 < dyint && dyint < d + RACKET_SIZE / 2 ? 0 : 1;
+}
 
 class DYNAMIC_LIBRARY_EXPORTED_CLASS rec_ping_pong: public IReceptors
 {
@@ -143,23 +173,29 @@ protected:
 
         fill(pfl, pfl + AfferentSpikeBufferSizeDW(GetNReceptors()), 0);
 
+        for (auto &y: aqpind_)
+            while (y.size() && y.front().first < ntact - SpikeQueueDepth_tacts)
+                y.pop_front();
+        while (qpind_all.size() && qpind_all.front().first < ntact - AllSpikeQueueDepth_tacts)
+            qpind_all.pop_front();
+
         if (!InputBlockCounter) {
-            for (auto &y: aqpind_)
-                while (y.size() && y.front().first < ntact - SpikeQueueDepth_tacts)
-                    y.pop_front();
             vector<bool> vb_Spatial(nSpatialZones);
             vector<bool> vb_Velocity(nVelocityZones);
             vector<bool> vb_CloseZone(nRelPos * nRelPos);
             BitMaskAccess bma;
             (*vupdog_[BallX])(vr_CurrentPhaseSpacePoint[BallX], vb_Spatial);
             int z = 0;
+            int y = 0;
             for (auto b: vb_Spatial) {
                 if (b) {
                     pfl |= bma;
                     aqpind_[BallX].push_back(pair<int, int>(ntact, z));
+                    qpind_all.push_back(pair<int, int>(ntact, y));
                 }
                 ++bma;
                 ++z;
+                ++y;
             }
             (*vupdog_[BallY])(vr_CurrentPhaseSpacePoint[BallY], vb_Spatial);
             z = 0;
@@ -167,9 +203,11 @@ protected:
                 if (b) {
                     pfl |= bma;
                     aqpind_[BallY].push_back(pair<int, int>(ntact, z));
+                    qpind_all.push_back(pair<int, int>(ntact, y));
                 }
                 ++bma;
                 ++z;
+                ++y;
             }
             (*vupdog_[BallVX])(vr_CurrentPhaseSpacePoint[BallVX], vb_Velocity);
             z = 0;
@@ -177,9 +215,11 @@ protected:
                 if (b) {
                     pfl |= bma;
                     aqpind_[BallVX].push_back(pair<int, int>(ntact, z));
+                    qpind_all.push_back(pair<int, int>(ntact, y));
                 }
                 ++bma;
                 ++z;
+                ++y;
             }
             (*vupdog_[BallVY])(vr_CurrentPhaseSpacePoint[BallVY], vb_Velocity);
             z = 0;
@@ -187,9 +227,11 @@ protected:
                 if (b) {
                     pfl |= bma;
                     aqpind_[BallVY].push_back(pair<int, int>(ntact, z));
+                    qpind_all.push_back(pair<int, int>(ntact, y));
                 }
                 ++bma;
                 ++z;
+                ++y;
             }
             (*vupdog_[RacketY])(vr_CurrentPhaseSpacePoint[RacketY], vb_Spatial);
             z = 0;
@@ -197,17 +239,34 @@ protected:
                 if (b) {
                     pfl |= bma;
                     aqpind_[RacketY].push_back(pair<int, int>(ntact, z));
+                    qpind_all.push_back(pair<int, int>(ntact, y));
                 }
                 ++bma;
                 ++z;
+                ++y;
             }
             (*vupdog_[CloseZone])(VECTOR<float>{vr_CurrentPhaseSpacePoint[BallX] + 0.5F, vr_CurrentPhaseSpacePoint[BallY] - vr_CurrentPhaseSpacePoint[RacketY]}, vb_CloseZone);
             for (auto b: vb_CloseZone) {
-                if (b)
+                if (b) {
                     pfl |= bma;
+                    qpind_all.push_back(pair<int, int>(ntact, y));
+                }
                 ++bma;
+                ++y;
             }
         } else --InputBlockCounter;
+
+        if (!(ntact % AllSpikeQueueDepth_tacts)) {
+            int CurrentStateTrue = State(vr_CurrentPhaseSpacePoint[0], vr_CurrentPhaseSpacePoint[1], vr_CurrentPhaseSpacePoint[2], vr_CurrentPhaseSpacePoint[3], vr_CurrentPhaseSpacePoint[4]);
+            if (CurrentStateTrue >= 0) {
+                vector<int> vn_spikes(nInputs, 0);
+                for (auto i: qpind_all)
+                    ++vn_spikes[i.second];
+                dt.Append(CurrentStateTrue, vn_spikes, ntact);
+            }
+            if (!(ntact % ModelRecreationPeriod_tacts))
+                prfr = dynamic_cast<RFRes *>(dt.pmlmRunGenericClassifier(&rf, &rfp));
+        }
 
         return true;
     }
@@ -328,25 +387,41 @@ public:
 
 int StateChangeDelay = 0;
 
-int State(double dxball, double dyball, double dvxball, double dvyball, double dyracket)
+int StatefromSpikes()
 {
-    if (dxball >= 0)
-        return -1;
-    if (dvxball >= 0)
-        return -1;
-//    if (dvx > 0) {  // retain it!
-//        dy += (0.5 - dx) * dvy / dvx;
-//        dx = 0.5;
-//        dvx = -dvx;
-//    }
-    double ddx = dxball + 0.5;
-    double dyint = dyball - ddx * dvyball / dvxball + 0.5;
-    dyint -= floor(dyint / 2) * 2;
-    double d = dyracket + 0.5;
-    if (d - RACKET_SIZE / 2 < dyint && dyint < d + RACKET_SIZE / 2)
+    auto drestore_parameter = [&](int dim)
+    {
+        auto i = aqpind_[dim].rbegin();
+        int n = 0;
+        int lastind = -1;
+        double dret = 0;
+        while (i != aqpind_[dim].rend() /* && (lastind == -1 || abs(i->second - lastind) < 3)*/) {
+            lastind = i->second;
+            dret += vupdog_[dim]->vvg_Zone.front()[lastind].dCenter;
+            ++n;
+            ++i;
+        }
+        return dret / n;
+    };
+    double dx, dy, dvx, dvy, dry;
+
+    dx = drestore_parameter(BallX);
+    dy = drestore_parameter(BallY);
+    dvx = drestore_parameter(BallVY);
+    dvy = drestore_parameter(BallVY);
+    dry = drestore_parameter(RacketY);
+
+    return State(dx, dy, dvx, dvy, dry);
+}
+
+int StatefromRF()
+{
+    if (!prfr)
         return 0;
-    d = 2 - d;
-    return d - RACKET_SIZE / 2 < dyint && dyint < d + RACKET_SIZE / 2 ? 0 : 1;
+    vector<float> vn_spikes(nInputs, 0.F);
+    for (auto i: qpind_all)
+        ++vn_spikes[i.second];
+    return rf.Apply(prfr, vn_spikes);
 }
 
 bool bState(bool bRewardRequested)
@@ -368,29 +443,7 @@ bool bState(bool bRewardRequested)
 
         double dx, dy, dvx, dvy, dry;
         CurrentStateTrue = State(vr_CurrentPhaseSpacePoint[0], vr_CurrentPhaseSpacePoint[1], vr_CurrentPhaseSpacePoint[2], vr_CurrentPhaseSpacePoint[3], vr_CurrentPhaseSpacePoint[4]);
-
-        auto drestore_parameter = [&](int dim)
-        {
-            auto i = aqpind_[dim].rbegin();
-            int n = 0;
-            int lastind = -1;
-            double dret = 0;
-            while (i != aqpind_[dim].rend() /* && (lastind == -1 || abs(i->second - lastind) < 3)*/) {
-                lastind = i->second;
-                dret += vupdog_[dim]->vvg_Zone.front()[lastind].dCenter;
-                ++n;
-                ++i;
-            }
-            return dret / n;
-        };
-
-        dx = drestore_parameter(BallX);
-        dy = drestore_parameter(BallY);
-        dvx = drestore_parameter(BallVY);
-        dvy = drestore_parameter(BallVY);
-        dry = drestore_parameter(RacketY);
-
-        CurrentState = State(dx, dy, dvx, dvy, dry);
+        CurrentState = StatefromRF() /* StatefromSpikes() */;
 
         if (CurrentStateTrue == -1) {
             FormerStateTrue = -1;
