@@ -264,7 +264,7 @@ protected:
                     ++vn_spikes[i.second];
                 dt.Append(CurrentStateTrue, vn_spikes, ntact);
             }
-            if (!(ntact % ModelRecreationPeriod_tacts))
+            if (dt.NRecs() > 30 && !(ntact % ModelRecreationPeriod_tacts))
                 prfr = dynamic_cast<RFRes *>(dt.pmlmRunGenericClassifier(&rf, &rfp));
         }
 
@@ -417,7 +417,7 @@ int StatefromSpikes()
 int StatefromRF()
 {
     if (!prfr)
-        return 0;
+        return -1;
     vector<float> vn_spikes(nInputs, 0.F);
     for (auto i: qpind_all)
         ++vn_spikes[i.second];
