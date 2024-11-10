@@ -129,7 +129,7 @@ const int ModelRecreationPeriod_tacts = 210000;
 DatTab dt(nInputs);
 RF rf;
 RFPar rfp;
-RFRes *prfr = NULL;
+std::unique_ptr<RFRes> uprfr;
 
 vector<unique_ptr<DoGEncoder> > vupdog_(phase_space_dimension);
 
@@ -264,8 +264,10 @@ protected:
                     ++vn_spikes[i.second];
                 dt.Append(CurrentStateTrue, vn_spikes, ntact);
             }
-            if (dt.NRecs() > 30 && !(ntact % ModelRecreationPeriod_tacts))
-                prfr = dynamic_cast<RFRes *>(dt.pmlmRunGenericClassifier(&rf, &rfp));
+            if (dt.NRecs() > 30 && !(ntact % ModelRecreationPeriod_tacts)) {
+                rfp.DominatingClass = 1;
+                uprfr.reset(dynamic_cast<RFRes *>(dt.pmlmRunGenericClassifier(&rf, &rfp)));
+            }
         }
 
         return true;
@@ -416,12 +418,12 @@ int StatefromSpikes()
 
 int StatefromRF()
 {
-    if (!prfr)
+    if (!uprfr.get())
         return -1;
     vector<float> vn_spikes(nInputs, 0.F);
     for (auto i: qpind_all)
         ++vn_spikes[i.second];
-    return rf.Apply(prfr, vn_spikes);
+    return rf.Apply(uprfr.get(), vn_spikes);
 }
 
 bool bState(bool bRewardRequested)
