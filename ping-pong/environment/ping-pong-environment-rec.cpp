@@ -10,7 +10,6 @@ Emulates ping-pong game.
 #include <math.h>
 #include <random>
 #include <fstream>
-#include <iostream>
 #include <sstream>
 #include <memory>
 
@@ -30,6 +29,9 @@ extern pair<float, float> prr_BallSpeed;
 
 extern bool b_forVerifier_Reward;
 
+extern int nerrRF;
+extern int ncorrRF;
+
 int nGoalLevels;
 
 int ntact = -1;
@@ -37,6 +39,10 @@ int tactStart;
 
 int nRewards = 0;
 int nPunishments = 0;
+
+int nSecondaryRewards = 0;
+int nSecondaryPunishments = 0;
+
 int nRewardsTot = 0;
 int nPunishmentsTot = 0;
 int InputBlockCounter = 0;
@@ -266,7 +272,7 @@ protected:
             }
             if (dt.NRecs() > 30 && !(ntact % ModelRecreationPeriod_tacts)) {
                 rfp.DominatingClass = 1;
-                uprfr.reset(dynamic_cast<RFRes *>(dt.pmlmRunGenericClassifier(&rf, &rfp)));
+                uprfr.reset(dynamic_cast<RFRes *>(rf.pmlmCreateModel(&rfp, dt)));
             }
         }
 
@@ -416,14 +422,15 @@ int StatefromSpikes()
     return State(dx, dy, dvx, dvy, dry);
 }
 
-int StatefromRF()
+int StatefromRF(int CurrentState)
 {
     if (!uprfr.get())
         return -1;
     vector<float> vn_spikes(nInputs, 0.F);
     for (auto i: qpind_all)
         ++vn_spikes[i.second];
-    return rf.Apply(uprfr.get(), vn_spikes);
+    auto pr_pred = rf.pr_Apply(uprfr.get(), vn_spikes);
+    return pr_pred.second > 0.7F ? pr_pred.first : CurrentState;
 }
 
 bool bState(bool bRewardRequested)
@@ -445,7 +452,13 @@ bool bState(bool bRewardRequested)
 
         double dx, dy, dvx, dvy, dry;
         CurrentStateTrue = State(vr_CurrentPhaseSpacePoint[0], vr_CurrentPhaseSpacePoint[1], vr_CurrentPhaseSpacePoint[2], vr_CurrentPhaseSpacePoint[3], vr_CurrentPhaseSpacePoint[4]);
-        CurrentState = StatefromRF() /* StatefromSpikes() */;
+        CurrentState = StatefromRF(CurrentState) /* StatefromSpikes() */;
+
+        if (CurrentStateTrue >= 0 && CurrentState >= 0) {
+            if (CurrentStateTrue == CurrentState)
+                ++ncorrRF;
+            else ++nerrRF;
+        }
 
         if (CurrentStateTrue == -1) {
             FormerStateTrue = -1;
@@ -549,6 +562,14 @@ public:
     virtual bool bGenerateSignals(unsigned* pfl, int bitoffset) override
     {
         *pfl = bState(bReward);
+
+        if (*pfl) {
+            if (bReward)
+                ++nSecondaryRewards;
+            else ++nSecondaryPunishments;
+
+        }
+
         return true;
     }
     virtual void Randomize(void) override {};
@@ -563,61 +584,6 @@ public:
         IReceptors::LoadStatus(ser);
         ser >> bReward;
     }
-};
-
-class DYNAMIC_LIBRARY_EXPORTED_CLASS GrowingStimulation: public IReceptors
-{
-    int  ActivityTime;
-    int  maxIdleTime;
-    bool bh;
-protected:
-    virtual void GetMeanings(VECTOR<STRING> &vstr_Meanings) const override
-    {
-        vstr_Meanings.resize(GetNReceptors());
-        FORI(GetNReceptors())
-            vstr_Meanings[_i] = "sti" + str(_i);
-    }
-public:
-    GrowingStimulation(int nrec, const pugi::xml_node &xn)
-    {
-        if (nrec / 2 > 32) {
-            cout << "ping-pong -- Too many stimulating nodes\n";
-            exit(-1);
-        }
-        maxIdleTime = atoi_s(xn.child_value("maxidletime"));
-        reset();
-    }
-    virtual bool bGenerateSignals(unsigned *pfl, int bitoffset) override
-    {
-        size_t *pfl64 = (size_t *)pfl;   // SAFE BECAUSE OF 64 BIT RECEPTOR ALIGNMENT!
-        ++ActivityTime;
-        if (ActivityTime < 0 || ntact >= tactStart)
-            *pfl64 = 0;
-        else {
-            if (!ActivityTime)
-                bh = rng() > 0.5;
-            if (ActivityTime < GetNReceptors() / 2) {
-                *pfl64 = (1 << (ActivityTime + 1)) - 1;
-                if (bh)
-                    *pfl64 <<= GetNReceptors() / 2;
-            } else {
-                *pfl64 = 0;
-                ActivityTime = -1;
-            }
-        }
-        return true;
-    }
-    virtual void Randomize(void) override {};
-    virtual void SaveStatus(Serializer &ser) const override
-    {
-        IReceptors::SaveStatus(ser);
-    }
-    virtual ~GrowingStimulation() = default;
-    void LoadStatus(Serializer &ser)
-    {
-        IReceptors::LoadStatus(ser);
-    }
-    void reset(){ActivityTime = -maxIdleTime;}
 };
 
 GrowingStimulation *pgsG = NULL;
@@ -707,4 +673,25 @@ PING_PONG_ENVIRONMENT_EXPORT IReceptors *LoadStatus(Serializer &ser)
 		default: cout << "Too many calls of LoadStatus\n";
 				exit(-1);
 	}
+}
+
+bool GrowingStimulation::bGenerateSignals(unsigned *pfl, int bitoffset)
+{
+    size_t *pfl64 = (size_t *)pfl;   // SAFE BECAUSE OF 64 BIT RECEPTOR ALIGNMENT!
+    ++ActivityTime;
+    if (ActivityTime < 0 || ntact >= tactStart)
+        *pfl64 = 0;
+    else {
+        if (!ActivityTime)
+            bh = rng() > 0.5;
+        if (ActivityTime < GetNReceptors() / 2) {
+            *pfl64 = (1 << (ActivityTime + 1)) - 1;
+            if (bh)
+                *pfl64 <<= GetNReceptors() / 2;
+        } else {
+            *pfl64 = 0;
+            ActivityTime = -1;
+        }
+    }
+    return true;
 }

@@ -33,7 +33,7 @@ RUNTIME_OUTPUT_DIRECTORY    "${CMAKE_CURRENT_SOURCE_DIR}/../../Workplace"
 # Compile definitions
 ################################################################################
 target_compile_definitions(${PROJECT_NAME} PRIVATE
-    "FOR_LINUX;"
+    "FOR_LINUX"
     "_CRT_SECURE_NO_WARNINGS;"
     "NDEBUG;"
     "_CONSOLE;"
