@@ -104,8 +104,8 @@ PING_PONG_ENVIRONMENT_EXPORT bool ObtainOutputSpikes(const vector<int> &v_Firing
 
 PING_PONG_ENVIRONMENT_EXPORT int Finalize(int OriginalTerminationCode) 
 {
-    ofstream ofsRF("ping-pong.RF.bin");
-    rf.SaveModel(uprfr.get(), ofsRF);
+//    ofstream ofsRF("ping-pong.RF.bin");
+//    rf.SaveModel(uprfr.get(), ofsRF);
 
 	cout << "rew " << nRewards << " pun " << nPunishments << endl;
 

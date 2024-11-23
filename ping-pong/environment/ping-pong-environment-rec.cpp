@@ -262,19 +262,19 @@ protected:
             }
         } else --InputBlockCounter;
 
-        if (!(ntact % AllSpikeQueueDepth_tacts)) {
-            int CurrentStateTrue = State(vr_CurrentPhaseSpacePoint[0], vr_CurrentPhaseSpacePoint[1], vr_CurrentPhaseSpacePoint[2], vr_CurrentPhaseSpacePoint[3], vr_CurrentPhaseSpacePoint[4]);
-            if (CurrentStateTrue >= 0) {
-                vector<int> vn_spikes(nInputs, 0);
-                for (auto i: qpind_all)
-                    ++vn_spikes[i.second];
-                dt.Append(CurrentStateTrue, vn_spikes, ntact);
-            }
-            if (dt.NRecs() > 30 && !(ntact % ModelRecreationPeriod_tacts)) {
-                rfp.DominatingClass = 1;
-                uprfr.reset(dynamic_cast<RFRes *>(rf.pmlmCreateModel(&rfp, dt)));
-            }
-        }
+//        if (!(ntact % AllSpikeQueueDepth_tacts)) {
+//            int CurrentStateTrue = State(vr_CurrentPhaseSpacePoint[0], vr_CurrentPhaseSpacePoint[1], vr_CurrentPhaseSpacePoint[2], vr_CurrentPhaseSpacePoint[3], vr_CurrentPhaseSpacePoint[4]);
+//            if (CurrentStateTrue >= 0) {
+//                vector<int> vn_spikes(nInputs, 0);
+//                for (auto i: qpind_all)
+//                    ++vn_spikes[i.second];
+//                dt.Append(CurrentStateTrue, vn_spikes, ntact);
+//            }
+//            if (dt.NRecs() > 30 && !(ntact % ModelRecreationPeriod_tacts)) {
+//                rfp.DominatingClass = 1;
+//                uprfr.reset(dynamic_cast<RFRes *>(rf.pmlmCreateModel(&rfp, dt)));
+//            }
+//        }
 
         return true;
     }
@@ -422,6 +422,8 @@ int StatefromSpikes()
     return State(dx, dy, dvx, dvy, dry);
 }
 
+float rRewardSwitchThreshold = 0, rPunishmentSwitchThreshold = 0;
+
 int StatefromRF(int CurrentState)
 {
     if (!uprfr.get())
@@ -430,7 +432,7 @@ int StatefromRF(int CurrentState)
     for (auto i: qpind_all)
         ++vn_spikes[i.second];
     auto pr_pred = rf.pr_Apply(uprfr.get(), vn_spikes);
-    return pr_pred.second > 0.7F ? pr_pred.first : CurrentState;
+    return !pr_pred.first && pr_pred.second > 1 - rRewardSwitchThreshold || pr_pred.first == 1 && pr_pred.second > 1 - rPunishmentSwitchThreshold ? pr_pred.first : CurrentState;
 }
 
 bool bState(bool bRewardRequested)
@@ -558,7 +560,13 @@ protected:
         vstr_Meanings.front() = bReward ? "SECREW" : "SECPUN";
     }
 public:
-    SecondaryEvaluator(bool brew) : bReward(brew) {}
+    SecondaryEvaluator(bool brew) : bReward(brew)
+    {
+        if (!brew) {
+            std::ifstream ifsRF("ping-pong.RF.bin");
+            uprfr.reset(dynamic_cast<RFRes *>(rf.pmlmLoadModel(ifsRF)));
+        }
+    }
     virtual bool bGenerateSignals(unsigned* pfl, int bitoffset) override
     {
         *pfl = bState(bReward);
@@ -637,6 +645,8 @@ RECEPTORS_SET_PARAMETERS(pchMyReceptorSectionName, nReceptors, xn)
         else if (nReceptors != 1)
             throw std::runtime_error("SECPUN - wrong input node count");
         StateChangeDelay = atoi_s(xn.child_value("state_change_delay"));
+        rPunishmentSwitchThreshold = atoi_s(xn.child_value("punishment_switch_threshold"));
+        rRewardSwitchThreshold = atoi_s(xn.child_value("reward_switch_threshold"));
         return new SecondaryEvaluator(false);
     } else if (!strcmp(pchMyReceptorSectionName, "SECREW")) {
         if (nReceptors < 0)
