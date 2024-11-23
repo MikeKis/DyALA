@@ -10,12 +10,14 @@ Emulates ping-pong game.
 #include <math.h>
 #include <random>
 #include <fstream>
-#include <iostream>
 #include <sstream>
 #include <memory>
 
+#include <ArNI/../helpers/DatTab/RF/RF.h>
+
 #include "EnvironmentState.hpp"
-#include "AdaptiveSpikeSource.hpp"
+
+//#define EXACT_STATE_EVALUATION
 
 using namespace std;
 using namespace boost::interprocess;
@@ -27,6 +29,9 @@ extern pair<float, float> prr_BallSpeed;
 
 extern bool b_forVerifier_Reward;
 
+extern int nerrRF;
+extern int ncorrRF;
+
 int nGoalLevels;
 
 int ntact = -1;
@@ -34,6 +39,10 @@ int tactStart;
 
 int nRewards = 0;
 int nPunishments = 0;
+
+int nSecondaryRewards = 0;
+int nSecondaryPunishments = 0;
+
 int nRewardsTot = 0;
 int nPunishmentsTot = 0;
 int InputBlockCounter = 0;
@@ -102,32 +111,63 @@ public:
     }
 };
 
-vector<float> vr_CurrentPhaseSpacePoint(5);
-int curindxBall = -1;
-int curindyBall = -1;
-int curindvxBall = -1;
-int curindvyBall = -1;
-int curindRacket = -1;
+vector<float> vr_CurrentPhaseSpacePoint(5);   // It does not include relative positions!
+
+enum phase_space_coordinates
+{
+    BallX = 0,
+    BallY = 1,
+    BallVX = 2,
+    BallVY = 3,
+    RacketY = 4,
+    CloseZone = 5,
+    phase_space_dimension
+};
+
 bool bCurrentStateOK = false;
+float rIntensityFactor = 0.7;
+
+deque<pair<int, int> > aqpind_[5];   // for manual state classification
+deque<pair<int, int> > qpind_all;   // for RF state classification
+const int SpikeQueueDepth_tacts = 10;
+const int AllSpikeQueueDepth_tacts = 30;
+const int ModelRecreationPeriod_tacts = 210000;
+DatTab dt(nInputs);
+RF rf;
+RFPar rfp;
+std::unique_ptr<RFRes> uprfr;
+
+vector<unique_ptr<DoGEncoder> > vupdog_(phase_space_dimension);
+
+int State(double dxball, double dyball, double dvxball, double dvyball, double dyracket)
+{
+    if (dxball >= 0)
+        return -1;
+    if (dvxball >= 0)
+        return -1;
+//    if (dvx > 0) {  // retain it!
+//        dy += (0.5 - dx) * dvy / dvx;
+//        dx = 0.5;
+//        dvx = -dvx;
+//    }
+    double ddx = dxball + 0.5;
+    double dyint = dyball - ddx * dvyball / dvxball + 0.5;
+    dyint -= floor(dyint / 2) * 2;
+    double d = dyracket + 0.5;
+    if (d - RACKET_SIZE / 2 < dyint && dyint < d + RACKET_SIZE / 2)
+        return 0;
+    d = 2 - d;
+    return d - RACKET_SIZE / 2 < dyint && dyint < d + RACKET_SIZE / 2 ? 0 : 1;
+}
 
 class DYNAMIC_LIBRARY_EXPORTED_CLASS rec_ping_pong: public IReceptors
 {
-    vector<float> vr_VelocityZoneBoundary;
-    vector<AdaptiveSpikeSource> vass_;
 protected:
     virtual bool bGenerateSignals(unsigned *pfl, int bitoffset) override
     {
-        vector<int> vind_(6);
-#define indxBall vind_[0]
-#define indyBall vind_[1]
-#define indvxBall vind_[2]
-#define indvyBall vind_[3]
-#define indRacket vind_[4]
-#define indRaster vind_[5]
 
         ++ntact;
         UpdateWorld(vr_CurrentPhaseSpacePoint);
-
 
         static ofstream ofsState("ping_pong_state.csv");
         if (ofsState.is_open()) {
@@ -137,50 +177,104 @@ protected:
             ofsState << endl;
         }
 
-        indxBall = (int)((vr_CurrentPhaseSpacePoint[0] + 0.5) / (1. / nSpatialZones));
-        if (indxBall == nSpatialZones)
-            indxBall = nSpatialZones - 1;
-        indyBall = (int)((vr_CurrentPhaseSpacePoint[1] + 0.5) / (1. / nSpatialZones));
-        if (indyBall == nSpatialZones)
-            indyBall = nSpatialZones - 1;
-        indvxBall = (int)(lower_bound(vr_VelocityZoneBoundary.begin(), vr_VelocityZoneBoundary.end(), abs(vr_CurrentPhaseSpacePoint[2])) - vr_VelocityZoneBoundary.begin());
-        indvxBall = vr_CurrentPhaseSpacePoint[2] < 0 ? nVelocityZones / 2 - indvxBall : nVelocityZones / 2 + indvxBall;
-        indvyBall = (int)(lower_bound(vr_VelocityZoneBoundary.begin(), vr_VelocityZoneBoundary.end(), abs(vr_CurrentPhaseSpacePoint[3])) - vr_VelocityZoneBoundary.begin());
-        indvyBall = vr_CurrentPhaseSpacePoint[3] < 0 ? nVelocityZones / 2 - indvyBall : nVelocityZones / 2 + indvyBall;
-        indRacket = (int)((vr_CurrentPhaseSpacePoint[4] + 0.5) / (1. / nSpatialZones));
-        if (indRacket == nSpatialZones)
-            indRacket = nSpatialZones - 1;
-        vector<unsigned> vfl_(AfferentSpikeBufferSizeDW(GetNReceptors()), 0);
+        fill(pfl, pfl + AfferentSpikeBufferSizeDW(GetNReceptors()), 0);
+
+        for (auto &y: aqpind_)
+            while (y.size() && y.front().first < ntact - SpikeQueueDepth_tacts)
+                y.pop_front();
+        while (qpind_all.size() && qpind_all.front().first < ntact - AllSpikeQueueDepth_tacts)
+            qpind_all.pop_front();
+
         if (!InputBlockCounter) {
-            auto bset_input_spike = [&](int ind)
-                                    {
-                                        bool bret = vass_[ind].bFire();
-                                        if (bret)
-                                            &vfl_.front() |= BitMaskAccess(ind);
-                                        return bret;
-                                    };
-            if (bset_input_spike(indxBall))
-                curindxBall = indxBall;
-            if (bset_input_spike(nSpatialZones + indyBall))
-                curindyBall = indyBall;
-            if (bset_input_spike(nSpatialZones * 2 + indvxBall))
-                curindvxBall = indvxBall;
-            if (bset_input_spike(nSpatialZones * 2 + nVelocityZones + indvyBall))
-                curindvyBall = indvyBall;
-            if (bset_input_spike(nSpatialZones * 2 + nVelocityZones * 2 + indRacket))
-                curindRacket = indRacket;
-            int indxRel = (int)((vr_CurrentPhaseSpacePoint[0] + 0.5) / rRelPosStep);
-            if (indxRel < nRelPos) {
-                int indyRel = (int)((vr_CurrentPhaseSpacePoint[4] - vr_CurrentPhaseSpacePoint[1] + rRelPosStep / 2) / rRelPosStep);   // Raster goes from top (higher y) to bottom - in opposite
-                // direction to y axis
-                if (abs(indyRel) <= (nRelPos - 1) / 2) {
-                    indyRel += (nRelPos - 1) / 2;
-                    indRaster = indyRel * nRelPos + indxRel;
-                    bset_input_spike(nSpatialZones * 3 + nVelocityZones * 2 + indRaster);
+            vector<bool> vb_Spatial(nSpatialZones);
+            vector<bool> vb_Velocity(nVelocityZones);
+            vector<bool> vb_CloseZone(nRelPos * nRelPos);
+            BitMaskAccess bma;
+            (*vupdog_[BallX])(vr_CurrentPhaseSpacePoint[BallX], vb_Spatial);
+            int z = 0;
+            int y = 0;
+            for (auto b: vb_Spatial) {
+                if (b) {
+                    pfl |= bma;
+                    aqpind_[BallX].push_back(pair<int, int>(ntact, z));
+                    qpind_all.push_back(pair<int, int>(ntact, y));
                 }
+                ++bma;
+                ++z;
+                ++y;
+            }
+            (*vupdog_[BallY])(vr_CurrentPhaseSpacePoint[BallY], vb_Spatial);
+            z = 0;
+            for (auto b: vb_Spatial) {
+                if (b) {
+                    pfl |= bma;
+                    aqpind_[BallY].push_back(pair<int, int>(ntact, z));
+                    qpind_all.push_back(pair<int, int>(ntact, y));
+                }
+                ++bma;
+                ++z;
+                ++y;
+            }
+            (*vupdog_[BallVX])(vr_CurrentPhaseSpacePoint[BallVX], vb_Velocity);
+            z = 0;
+            for (auto b: vb_Velocity) {
+                if (b) {
+                    pfl |= bma;
+                    aqpind_[BallVX].push_back(pair<int, int>(ntact, z));
+                    qpind_all.push_back(pair<int, int>(ntact, y));
+                }
+                ++bma;
+                ++z;
+                ++y;
+            }
+            (*vupdog_[BallVY])(vr_CurrentPhaseSpacePoint[BallVY], vb_Velocity);
+            z = 0;
+            for (auto b: vb_Velocity) {
+                if (b) {
+                    pfl |= bma;
+                    aqpind_[BallVY].push_back(pair<int, int>(ntact, z));
+                    qpind_all.push_back(pair<int, int>(ntact, y));
+                }
+                ++bma;
+                ++z;
+                ++y;
+            }
+            (*vupdog_[RacketY])(vr_CurrentPhaseSpacePoint[RacketY], vb_Spatial);
+            z = 0;
+            for (auto b: vb_Spatial) {
+                if (b) {
+                    pfl |= bma;
+                    aqpind_[RacketY].push_back(pair<int, int>(ntact, z));
+                    qpind_all.push_back(pair<int, int>(ntact, y));
+                }
+                ++bma;
+                ++z;
+                ++y;
+            }
+            (*vupdog_[CloseZone])(VECTOR<float>{vr_CurrentPhaseSpacePoint[BallX] + 0.5F, vr_CurrentPhaseSpacePoint[BallY] - vr_CurrentPhaseSpacePoint[RacketY]}, vb_CloseZone);
+            for (auto b: vb_CloseZone) {
+                if (b) {
+                    pfl |= bma;
+                    qpind_all.push_back(pair<int, int>(ntact, y));
+                }
+                ++bma;
+                ++y;
             }
         } else --InputBlockCounter;
-        copy(vfl_.begin(), vfl_.end(), pfl);
+
+//        if (!(ntact % AllSpikeQueueDepth_tacts)) {
+//            int CurrentStateTrue = State(vr_CurrentPhaseSpacePoint[0], vr_CurrentPhaseSpacePoint[1], vr_CurrentPhaseSpacePoint[2], vr_CurrentPhaseSpacePoint[3], vr_CurrentPhaseSpacePoint[4]);
+//            if (CurrentStateTrue >= 0) {
+//                vector<int> vn_spikes(nInputs, 0);
+//                for (auto i: qpind_all)
+//                    ++vn_spikes[i.second];
+//                dt.Append(CurrentStateTrue, vn_spikes, ntact);
+//            }
+//            if (dt.NRecs() > 30 && !(ntact % ModelRecreationPeriod_tacts)) {
+//                rfp.DominatingClass = 1;
+//                uprfr.reset(dynamic_cast<RFRes *>(rf.pmlmCreateModel(&rfp, dt)));
+//            }
+//        }
 
         return true;
     }
@@ -222,30 +316,39 @@ protected:
             }
     }
 public:
-    rec_ping_pong(): vr_VelocityZoneBoundary((nVelocityZones - 1) / 2), vass_(nInputs)
+    rec_ping_pong()
     {
-        vector<float> vr_samples(9000);
-        for (auto &i: vr_samples) {
-            float rBallVelocity = rMakeBallVelocity();
-            float rBallMovementDirection = (float)rng(M_PI / 2);
-            i = rBallVelocity * sin(rBallMovementDirection);
+        const int nVelocitySamples = 9000;
+        vector<float> vr_vxsamples(nVelocitySamples);
+        vector<float> vr_vysamples(nVelocitySamples);
+        for (int i = 0; i < nVelocitySamples; ++i) {
+            auto prr_v = prr_MakeBallVelocity(false);
+            vr_vxsamples[i] = rng() < 0.5 ? -prr_v.first : prr_v.first;
+            vr_vysamples[i] = prr_v.second;
         }
-        sort(vr_samples.begin(), vr_samples.end());
-        FORI((nVelocityZones - 1) / 2)
-            vr_VelocityZoneBoundary[_i] = vr_samples[vr_samples.size() / 9 + _i * 2 * vr_samples.size() / 9];
+        vupdog_[BallX].reset(new DoGEncoder(-0.5, 0.5, 30, rIntensityFactor));
+        vupdog_[BallY].reset(new DoGEncoder(-0.5, 0.5, 30, rIntensityFactor));
+        vupdog_[BallVX].reset(new DoGEncoder(vr_vxsamples, nVelocityZones, rIntensityFactor));
+        vupdog_[BallVY].reset(new DoGEncoder(vr_vysamples, nVelocityZones, rIntensityFactor));
+        vupdog_[RacketY].reset(new DoGEncoder(-0.5, 0.5, 30, rIntensityFactor));
+        vupdog_[CloseZone].reset(new DoGEncoder({{{0., rRelPosStep * nRelPos}, nRelPos}, {{-rRelPosStep * nRelPos / 2, rRelPosStep * nRelPos / 2}, nRelPos}}, rIntensityFactor));
 
     }
     virtual void Randomize(void) override {rng.Randomize();}
+
+    // NOT WORKABLE !!
+
     virtual void SaveStatus(Serializer &ser) const override
     {
         IReceptors::SaveStatus(ser);
         ser << *es.pprr_Ball;
         ser << *es.prRacket;
         ser << prr_BallSpeed;
-        ser << vr_VelocityZoneBoundary;
         ser << rng;
     }
+
     virtual ~rec_ping_pong() = default;
+
     void LoadStatus(Serializer &ser)
     {
         IReceptors::LoadStatus(ser);
@@ -253,9 +356,9 @@ public:
         es.prRacket = &((pair<pair<float, float>, float> *)es.pprr_Ball)->second;
         ser >> *es.prRacket;
         ser >> prr_BallSpeed;
-        ser >> vr_VelocityZoneBoundary;
         ser >> rng;
     }
+
 };
 
 #ifndef BIGREALNUMBER
@@ -292,76 +395,159 @@ public:
 
 int StateChangeDelay = 0;
 
+int StatefromSpikes()
+{
+    auto drestore_parameter = [&](int dim)
+    {
+        auto i = aqpind_[dim].rbegin();
+        int n = 0;
+        int lastind = -1;
+        double dret = 0;
+        while (i != aqpind_[dim].rend() /* && (lastind == -1 || abs(i->second - lastind) < 3)*/) {
+            lastind = i->second;
+            dret += vupdog_[dim]->vvg_Zone.front()[lastind].dCenter;
+            ++n;
+            ++i;
+        }
+        return dret / n;
+    };
+    double dx, dy, dvx, dvy, dry;
+
+    dx = drestore_parameter(BallX);
+    dy = drestore_parameter(BallY);
+    dvx = drestore_parameter(BallVY);
+    dvy = drestore_parameter(BallVY);
+    dry = drestore_parameter(RacketY);
+
+    return State(dx, dy, dvx, dvy, dry);
+}
+
+float rRewardSwitchThreshold = 0, rPunishmentSwitchThreshold = 0;
+
+int StatefromRF(int CurrentState)
+{
+    if (!uprfr.get())
+        return -1;
+    vector<float> vn_spikes(nInputs, 0.F);
+    for (auto i: qpind_all)
+        ++vn_spikes[i.second];
+    auto pr_pred = rf.pr_Apply(uprfr.get(), vn_spikes);
+    return !pr_pred.first && pr_pred.second > 1 - rRewardSwitchThreshold || pr_pred.first == 1 && pr_pred.second > 1 - rPunishmentSwitchThreshold ? pr_pred.first : CurrentState;
+}
+
 bool bState(bool bRewardRequested)
 {
-    static vector<float> vr_VelocityZoneMedian;
     static int tactLastStateChange = -1000000;
+    static int tactLastStateChangeTrue = -1000000;
     static bool bLastChangetoGood;
+    static bool bLastChangetoGoodTrue;
     static int FormerState = -1;
-    if (vr_VelocityZoneMedian.empty()) {
-        vector<float> vr_samples(9000, 0.F);
-        for (auto &i: vr_samples) {
-            float rBallVelocity = rMakeBallVelocity();
-            float rBallMovementDirection = rng() * PI / 2;
-            i = rBallVelocity * sin(rBallMovementDirection);
-        }
-        sort(vr_samples.begin(), vr_samples.end());
-        vr_VelocityZoneMedian.resize((nVelocityZones - 1) / 2);
-        FORI(vr_VelocityZoneMedian.size())
-            vr_VelocityZoneMedian[_i] = vr_samples[(_i + 1) * 2 * vr_samples.size() / 9];
-    }
+    static int FormerStateTrue = -1;
+    static int CurrentStateTrue, CurrentState;
     if (!bRewardRequested) {   // punishment is requested first
-        if (curindxBall < 0 || curindyBall < 0 || curindvxBall < 0 || curindvyBall < 0 || curindRacket < 0) {
-            FormerState = -1;
+
+        if (InputBlockCounter || any_of(aqpind_, aqpind_ + sizeof(aqpind_) / sizeof(aqpind_[0]), [](const deque<pair<int, int> > &qpind_){return qpind_.empty();})) {
+            FormerState = FormerStateTrue = -1;
             tactLastStateChange = -1000000;
             return false;
         }
-        double dx = -0.5 + (0.5 + curindxBall) / nSpatialZones;
-                    dx = vr_CurrentPhaseSpacePoint[0];
-        if (dx >= 0) {
+
+        double dx, dy, dvx, dvy, dry;
+        CurrentStateTrue = State(vr_CurrentPhaseSpacePoint[0], vr_CurrentPhaseSpacePoint[1], vr_CurrentPhaseSpacePoint[2], vr_CurrentPhaseSpacePoint[3], vr_CurrentPhaseSpacePoint[4]);
+        CurrentState = StatefromRF(CurrentState) /* StatefromSpikes() */;
+
+        if (CurrentStateTrue >= 0 && CurrentState >= 0) {
+            if (CurrentStateTrue == CurrentState)
+                ++ncorrRF;
+            else ++nerrRF;
+        }
+
+        if (CurrentStateTrue == -1) {
+            FormerStateTrue = -1;
+            tactLastStateChangeTrue = -1000000;
+#ifdef EXACT_STATE_EVALUATION
+            return false;
+#endif
+        }
+        if (CurrentState == -1) {
             FormerState = -1;
             tactLastStateChange = -1000000;
+#ifndef EXACT_STATE_EVALUATION
             return false;
+#endif
         }
-        double dy = -0.5 + (0.5 + curindyBall) / nSpatialZones;
-                    dy = vr_CurrentPhaseSpacePoint[1];
-        double dvx = curindvxBall == nVelocityZones / 2 ? 0. : curindvxBall < nVelocityZones / 2 ? -vr_VelocityZoneMedian[nVelocityZones / 2 - curindvxBall - 1] : vr_VelocityZoneMedian[curindvxBall - nVelocityZones / 2 - 1];
-                    dvx = vr_CurrentPhaseSpacePoint[2];
-        if (dvx >= 0) {
-            FormerState = -1;
-            tactLastStateChange = -1000000;
-            return false;
+        if (CurrentStateTrue != -1 && FormerStateTrue != -1 && FormerStateTrue != CurrentStateTrue) {
+            if (ntact - tactLastStateChangeTrue > StateChangeDelay) {
+                tactLastStateChangeTrue = ntact;
+                bLastChangetoGoodTrue = !CurrentStateTrue;
+            } else tactLastStateChangeTrue = -1000000;
         }
-        double dvy = curindvyBall == nVelocityZones / 2 ? 0. : curindvyBall < nVelocityZones / 2 ? -vr_VelocityZoneMedian[nVelocityZones / 2 - curindvyBall - 1] : vr_VelocityZoneMedian[curindvyBall - nVelocityZones / 2 - 1];
-                    dvy = vr_CurrentPhaseSpacePoint[3];
-        double dry = -0.5 + (0.5 + curindRacket) / nSpatialZones;
-                    dry = vr_CurrentPhaseSpacePoint[4];
-        if (dvx > 0) {  // retain it!
-            dy += (0.5 - dx) * dvy / dvx;
-            dx = 0.5;
-            dvx = -dvx;
-        }
-        double ddx = dx + 0.5;
-        double dyint = dy - ddx * dvy / dvx + 0.5;
-        dyint -= floor(dyint / 2) * 2;
-        dry += 0.5;
-        int CurrentState;
-        if (dry - RACKET_SIZE / 2 < dyint && dyint < dry + RACKET_SIZE / 2)
-            CurrentState = 0;
-        else {
-            dry = 2 - dry;
-            CurrentState = dry - RACKET_SIZE / 2 < dyint && dyint < dry + RACKET_SIZE / 2 ? 0 : 1;
-        }
-        if (FormerState != -1 && FormerState != CurrentState) {
+        if (CurrentState != -1 && FormerState != -1 && FormerState != CurrentState) {
             if (ntact - tactLastStateChange > StateChangeDelay) {
                 tactLastStateChange = ntact;
                 bLastChangetoGood = !CurrentState;
             } else tactLastStateChange = -1000000;
         }
         FormerState = CurrentState;
+        FormerStateTrue = CurrentStateTrue;
+
+#ifdef EXACT_STATE_EVALUATION
+        bCurrentStateOK = !CurrentStateTrue;
+#else
         bCurrentStateOK = !CurrentState;
+#endif
+
+        static ofstream ofsState("ping_pong_state_rest.csv");
+        static bool bHeaderWritten = false;
+        if (!bHeaderWritten) {
+            ofsState << "tact,x,xp,y,yp,vx,vxp,vy,vyp,yr,yrp,state,statep,tactchage,tactchangep,goodchange,goodchagep,dec,decp\n";
+            bHeaderWritten = true;
+        }
+        ofsState << ntact
+                 << ','
+                 << vr_CurrentPhaseSpacePoint[0]
+                 << ','
+                 << dx
+                 << ','
+                 << vr_CurrentPhaseSpacePoint[1]
+                 << ','
+                 << dy
+                 << ','
+                 << vr_CurrentPhaseSpacePoint[2]
+                 << ','
+                 << dvx
+                 << ','
+                 << vr_CurrentPhaseSpacePoint[3]
+                 << ','
+                 << dvy
+                 << ','
+                 << vr_CurrentPhaseSpacePoint[4]
+                 << ','
+                 << dry
+                 << ','
+                 << CurrentStateTrue
+                 << ','
+                 << CurrentState
+                 << ','
+                 << tactLastStateChangeTrue
+                 << ','
+                 << tactLastStateChange
+                 << ','
+                 << (bLastChangetoGoodTrue ? '1' : '0')
+                 << ','
+                 << (bLastChangetoGood ? '1' : '0')
+                 << ','
+                 << (ntact - tactLastStateChangeTrue == StateChangeDelay ? (bLastChangetoGoodTrue ? "1" : "-1") : "0")
+                 << ','
+                 << (ntact - tactLastStateChange == StateChangeDelay ? (bLastChangetoGood ? "1" : "-1") : "0")
+                 << endl;
+
     }
-    return ntact - tactLastStateChange == StateChangeDelay && bLastChangetoGood == bRewardRequested;
+#ifdef EXACT_STATE_EVALUATION
+    return CurrentStateTrue != -1 && ntact - tactLastStateChangeTrue == StateChangeDelay && bLastChangetoGoodTrue == bRewardRequested;
+#else
+    return CurrentState != -1 && ntact - tactLastStateChange == StateChangeDelay && bLastChangetoGood == bRewardRequested;
+#endif
 }
 
 class DYNAMIC_LIBRARY_EXPORTED_CLASS SecondaryEvaluator: public IReceptors
@@ -374,10 +560,24 @@ protected:
         vstr_Meanings.front() = bReward ? "SECREW" : "SECPUN";
     }
 public:
-    SecondaryEvaluator(bool brew) : bReward(brew) {}
+    SecondaryEvaluator(bool brew) : bReward(brew)
+    {
+        if (!brew) {
+            std::ifstream ifsRF("ping-pong.RF.bin");
+            uprfr.reset(dynamic_cast<RFRes *>(rf.pmlmLoadModel(ifsRF)));
+        }
+    }
     virtual bool bGenerateSignals(unsigned* pfl, int bitoffset) override
     {
         *pfl = bState(bReward);
+
+        if (*pfl) {
+            if (bReward)
+                ++nSecondaryRewards;
+            else ++nSecondaryPunishments;
+
+        }
+
         return true;
     }
     virtual void Randomize(void) override {};
@@ -392,61 +592,6 @@ public:
         IReceptors::LoadStatus(ser);
         ser >> bReward;
     }
-};
-
-class DYNAMIC_LIBRARY_EXPORTED_CLASS GrowingStimulation: public IReceptors
-{
-    int  ActivityTime;
-    int  maxIdleTime;
-    bool bh;
-protected:
-    virtual void GetMeanings(VECTOR<STRING> &vstr_Meanings) const override
-    {
-        vstr_Meanings.resize(GetNReceptors());
-        FORI(GetNReceptors())
-            vstr_Meanings[_i] = "sti" + str(_i);
-    }
-public:
-    GrowingStimulation(int nrec, const pugi::xml_node &xn)
-    {
-        if (nrec / 2 > 32) {
-            cout << "ping-pong -- Too many stimulating nodes\n";
-            exit(-1);
-        }
-        maxIdleTime = atoi_s(xn.child_value("maxidletime"));
-        reset();
-    }
-    virtual bool bGenerateSignals(unsigned *pfl, int bitoffset) override
-    {
-        size_t *pfl64 = (size_t *)pfl;   // SAFE BECAUSE OF 64 BIT RECEPTOR ALIGNMENT!
-        ++ActivityTime;
-        if (ActivityTime < 0 || ntact >= tactStart)
-            *pfl64 = 0;
-        else {
-            if (!ActivityTime)
-                bh = rng() > 0.5;
-            if (ActivityTime < GetNReceptors() / 2) {
-                *pfl64 = (1 << (ActivityTime + 1)) - 1;
-                if (bh)
-                    *pfl64 <<= GetNReceptors() / 2;
-            } else {
-                *pfl64 = 0;
-                ActivityTime = -1;
-            }
-        }
-        return true;
-    }
-    virtual void Randomize(void) override {};
-    virtual void SaveStatus(Serializer &ser) const override
-    {
-        IReceptors::SaveStatus(ser);
-    }
-    virtual ~GrowingStimulation() = default;
-    void LoadStatus(Serializer &ser)
-    {
-        IReceptors::LoadStatus(ser);
-    }
-    void reset(){ActivityTime = -maxIdleTime;}
 };
 
 GrowingStimulation *pgsG = NULL;
@@ -500,6 +645,8 @@ RECEPTORS_SET_PARAMETERS(pchMyReceptorSectionName, nReceptors, xn)
         else if (nReceptors != 1)
             throw std::runtime_error("SECPUN - wrong input node count");
         StateChangeDelay = atoi_s(xn.child_value("state_change_delay"));
+        rPunishmentSwitchThreshold = atoi_s(xn.child_value("punishment_switch_threshold"));
+        rRewardSwitchThreshold = atoi_s(xn.child_value("reward_switch_threshold"));
         return new SecondaryEvaluator(false);
     } else if (!strcmp(pchMyReceptorSectionName, "SECREW")) {
         if (nReceptors < 0)
@@ -536,4 +683,25 @@ PING_PONG_ENVIRONMENT_EXPORT IReceptors *LoadStatus(Serializer &ser)
 		default: cout << "Too many calls of LoadStatus\n";
 				exit(-1);
 	}
+}
+
+bool GrowingStimulation::bGenerateSignals(unsigned *pfl, int bitoffset)
+{
+    size_t *pfl64 = (size_t *)pfl;   // SAFE BECAUSE OF 64 BIT RECEPTOR ALIGNMENT!
+    ++ActivityTime;
+    if (ActivityTime < 0 || ntact >= tactStart)
+        *pfl64 = 0;
+    else {
+        if (!ActivityTime)
+            bh = rng() > 0.5;
+        if (ActivityTime < GetNReceptors() / 2) {
+            *pfl64 = (1 << (ActivityTime + 1)) - 1;
+            if (bh)
+                *pfl64 <<= GetNReceptors() / 2;
+        } else {
+            *pfl64 = 0;
+            ActivityTime = -1;
+        }
+    }
+    return true;
 }

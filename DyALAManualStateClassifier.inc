@@ -6,7 +6,7 @@
 // $$$ COMMON DEFINES
 #define MAXEMULATIONTIME 2000000
 #define STIMULATIONTIME 1000000
-#define NINPUTS 133
+#define NINPUTS 175
 #define NTESTS 3
 #define SECOND_TEST_THRESHOLD 0x7fffffff   // DO NOT USE PROTOCOL POSTPROCESSOR !!
 //------------------------------------------------------------------------------------------------
@@ -19,12 +19,6 @@ NetworkTestingParams ntpG{EMULATOR, RECOGNIZER, NTESTS, SECOND_TEST_THRESHOLD, N
 //------------------------------------------------------------------------------------------------
 // $$$ DEFINE CHROMOSOME
 
-#define THRESHOLDWINC_MIN 0.0001
-#define THRESHOLDWINC_MAX 1.
-
-#define LTHRESHOLDINC_MIN 1.
-#define LTHRESHOLDINC_MAX 300.
-
 CHROMOSOME_DEFINITION
 {
     INITIALIZE_GENE(ACTIONSTEP, rng.logUniform(0.001, 0.1)),   // racket sfift causing ACTIONS firing
@@ -32,7 +26,7 @@ CHROMOSOME_DEFINITION
     INITIALIZE_GENE(NNEURONSPERACTION, rng.logUniform(1, 30)),
     INITIALIZE_GENE(LCHARTIME, rng.logUniform(1, 30)),
     INITIALIZE_GENE(LTHRESHOLDDECAYPERIOD, rng.logUniform(1, 3000)),
-    INITIALIZE_GENE(LTHRESHOLDINC, rng()),
+    INITIALIZE_GENE(LTHRESHOLDINC, rng.logUniform(1, 300)),
     INITIALIZE_GENE(PLASTICITYTIME, rng.logUniform(3, 100)),
     INITIALIZE_GENE(MAXWEIGHT, rng.logUniform(0.3, 3.)),
     INITIALIZE_GENE(STABILITYRESOURCECHANGERATIO, rng.logUniform(0.03, 30)),
@@ -63,7 +57,7 @@ int StructuralCriterion(int)
 unsigned Experiment = 3000;
 //------------------------------------------------------------------------------------------------
 // $$$ SET CUSTOM PARAMETER BOUNDARIES
-bool bBadHyperparameters(const vector<int> &v_point, const vector<dimension> &vdim_) {return V("NLEARNINGGROUPS") < 1;}
+bool bBadHyperparameters(const vector<int> &v_point, const vector<dimension> &vdim_) {return V("NLEARNINGGROUPS") < 1 || V("PUNISHMENT_SWITCH_THTRESHOLD" > 0.5 || V("REWARD_SWITCH_THTRESHOLD" > 0.5;}
 //------------------------------------------------------------------------------------------------
 #endif   // ARNI_CD defined
 
@@ -83,10 +77,11 @@ EVALUATOR
 //------------------------------------------------------------------------------------------------
 // $$$ SUBSTITUTE ALL VALUES
 
-   SUBMACRO(STIMULATIONTIME);
+    SUBMACRO(STIMULATIONTIME);
+    SUBMACRO(NINPUTS);
 
     SUBVALUE("NNEU", nint(V(NNEURONSPERACTION)) * 2);
-    SUBVALUE("LTHRESHOLDINC", exp(log(300.) * V(LTHRESHOLDINC)));
+    SUBV(LTHRESHOLDINC);
 
     SUBV(ACTIONSTEP);   // racket sfift causing ACTIONS firing
     SUBVINT(MAXIDLETIME);  // no-action time after which external stimalation is switched on

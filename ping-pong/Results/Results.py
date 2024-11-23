@@ -9,7 +9,7 @@ import numpy as np
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 
-file = "monitoring.2.csv"
+file = "monitoring.102.csv"
 
 SaturatedResourceThreshold = 30
 norm = mpl.colors.TwoSlopeNorm(vmin = -SaturatedResourceThreshold, vcenter = 0, vmax = SaturatedResourceThreshold)
@@ -17,7 +17,7 @@ normdif = mpl.colors.TwoSlopeNorm(vmin = -0.3, vcenter = 0, vmax = 0.3)
 
 nActions = 2
 nSpatialZones = 30
-nVelocityZones = 9
+nVelocityZones = 10
 nRelPos = 5
 coo = np.arange(0, nSpatialZones)
 
