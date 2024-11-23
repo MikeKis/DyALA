@@ -224,7 +224,7 @@ protected:
 public:
     rec_ping_pong(): vr_VelocityZoneBoundary((nVelocityZones - 1) / 2), vass_(nInputs)
     {
-        vector<float> vr_samples(9000);
+        vector<float> vr_samples(nVelocityZones * 1000);
         for (auto &i: vr_samples) {
             float rBallVelocity = rMakeBallVelocity();
             float rBallMovementDirection = (float)rng(M_PI / 2);
@@ -232,7 +232,7 @@ public:
         }
         sort(vr_samples.begin(), vr_samples.end());
         FORI((nVelocityZones - 1) / 2)
-            vr_VelocityZoneBoundary[_i] = vr_samples[vr_samples.size() / 9 + _i * 2 * vr_samples.size() / 9];
+            vr_VelocityZoneBoundary[_i] = vr_samples[vr_samples.size() / nVelocityZones + _i * 2 * vr_samples.size() / nVelocityZones];
 
     }
     virtual void Randomize(void) override {rng.Randomize();}
@@ -299,7 +299,7 @@ bool bState(bool bRewardRequested)
     static bool bLastChangetoGood;
     static int FormerState = -1;
     if (vr_VelocityZoneMedian.empty()) {
-        vector<float> vr_samples(9000, 0.F);
+        vector<float> vr_samples(nVelocityZones * 1000, 0.F);
         for (auto &i: vr_samples) {
             float rBallVelocity = rMakeBallVelocity();
             float rBallMovementDirection = rng() * PI / 2;
@@ -308,7 +308,7 @@ bool bState(bool bRewardRequested)
         sort(vr_samples.begin(), vr_samples.end());
         vr_VelocityZoneMedian.resize((nVelocityZones - 1) / 2);
         FORI(vr_VelocityZoneMedian.size())
-            vr_VelocityZoneMedian[_i] = vr_samples[(_i + 1) * 2 * vr_samples.size() / 9];
+            vr_VelocityZoneMedian[_i] = vr_samples[(_i + 1) * 2 * vr_samples.size() / nVelocityZones];
     }
     if (!bRewardRequested) {   // punishment is requested first
         if (curindxBall < 0 || curindyBall < 0 || curindvxBall < 0 || curindvyBall < 0 || curindRacket < 0) {
@@ -317,25 +317,25 @@ bool bState(bool bRewardRequested)
             return false;
         }
         double dx = -0.5 + (0.5 + curindxBall) / nSpatialZones;
-                    dx = vr_CurrentPhaseSpacePoint[0];
+//                    dx = vr_CurrentPhaseSpacePoint[0];
         if (dx >= 0) {
             FormerState = -1;
             tactLastStateChange = -1000000;
             return false;
         }
         double dy = -0.5 + (0.5 + curindyBall) / nSpatialZones;
-                    dy = vr_CurrentPhaseSpacePoint[1];
+//                    dy = vr_CurrentPhaseSpacePoint[1];
         double dvx = curindvxBall == nVelocityZones / 2 ? 0. : curindvxBall < nVelocityZones / 2 ? -vr_VelocityZoneMedian[nVelocityZones / 2 - curindvxBall - 1] : vr_VelocityZoneMedian[curindvxBall - nVelocityZones / 2 - 1];
-                    dvx = vr_CurrentPhaseSpacePoint[2];
+//                    dvx = vr_CurrentPhaseSpacePoint[2];
         if (dvx >= 0) {
             FormerState = -1;
             tactLastStateChange = -1000000;
             return false;
         }
         double dvy = curindvyBall == nVelocityZones / 2 ? 0. : curindvyBall < nVelocityZones / 2 ? -vr_VelocityZoneMedian[nVelocityZones / 2 - curindvyBall - 1] : vr_VelocityZoneMedian[curindvyBall - nVelocityZones / 2 - 1];
-                    dvy = vr_CurrentPhaseSpacePoint[3];
+//                    dvy = vr_CurrentPhaseSpacePoint[3];
         double dry = -0.5 + (0.5 + curindRacket) / nSpatialZones;
-                    dry = vr_CurrentPhaseSpacePoint[4];
+//                    dry = vr_CurrentPhaseSpacePoint[4];
         if (dvx > 0) {  // retain it!
             dy += (0.5 - dx) * dvy / dvx;
             dx = 0.5;
