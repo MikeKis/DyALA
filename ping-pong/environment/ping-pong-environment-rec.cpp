@@ -443,7 +443,7 @@ bool bState(bool bRewardRequested)
     static bool bLastChangetoGoodTrue;
     static int FormerState = -1;
     static int FormerStateTrue = -1;
-    static int CurrentStateTrue, CurrentState;
+    static int CurrentStateTrue, CurrentState = -1;
     if (!bRewardRequested) {   // punishment is requested first
 
         if (InputBlockCounter || any_of(aqpind_, aqpind_ + sizeof(aqpind_) / sizeof(aqpind_[0]), [](const deque<pair<int, int> > &qpind_){return qpind_.empty();})) {

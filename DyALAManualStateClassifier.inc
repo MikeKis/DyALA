@@ -59,7 +59,7 @@ int StructuralCriterion(int)
 unsigned Experiment = 3000;
 //------------------------------------------------------------------------------------------------
 // $$$ SET CUSTOM PARAMETER BOUNDARIES
-bool bBadHyperparameters(const vector<int> &v_point, const vector<dimension> &vdim_) {return V("NLEARNINGGROUPS") < 1 || V("PUNISHMENT_SWITCH_THTRESHOLD") > 0.5 || V("REWARD_SWITCH_THTRESHOLD") > 0.5;}
+bool bBadHyperparameters(const vector<int> &v_point, const vector<dimension> &vdim_) {return V(NNEURONSPERACTION) < 1 || V(PUNISHMENT_SWITCH_THTRESHOLD) > 0.5 || V(REWARD_SWITCH_THTRESHOLD) > 0.5;}
 
 //------------------------------------------------------------------------------------------------
 #endif   // ARNI_CD defined
