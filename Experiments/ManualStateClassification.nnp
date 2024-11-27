@@ -12,7 +12,7 @@
     <Implementation lib="ping-pong-environment"></Implementation>
   </RECEPTORS>
   
-  <RECEPTORS name="R" n="133">
+  <RECEPTORS name="R" n="$(NINPUTS)">
     <Implementation lib="ping-pong-environment"></Implementation>
   </RECEPTORS>
   <RECEPTORS name="Actions" n="2">
@@ -26,6 +26,8 @@
     <Implementation lib="ping-pong-environment">
     	<args>
 		<state_change_delay>1</state_change_delay>
+		<punishment_switch_threshold>$(PUNISHMENT_SWITCH_THTRESHOLD)</punishment_switch_threshold>
+		<reward_switch_threshold>$(REWARD_SWITCH_THTRESHOLD)</reward_switch_threshold>
     	</args>
     </Implementation>
   </RECEPTORS>

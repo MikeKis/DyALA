@@ -24,19 +24,26 @@ float rMakeBallVelocity(void)
     return(1.F / i1);
 }
 
+pair<float, float> prr_MakeBallVelocity(bool bPunishment)
+{
+    float rBallVelocity = rMakeBallVelocity();
+    float rBallMovementDirection;
+    pair<float, float> prr_ret;
+    do {
+        rBallMovementDirection = (float)rng(2 * M_PI);
+        prr_ret.first = rBallVelocity * sin(rBallMovementDirection);
+    } while (prr_ret.first < 1. / (2 * maxSpotPassageTime_ms) || !bPunishment && prr_ret.first < 0.);
+    prr_ret.second = rBallVelocity * cos(rBallMovementDirection);
+    return prr_ret;
+}
+
 void EnvironmentState::ResetBall(bool bPunishment)
 {
     if (bPunishment) {
         es.pprr_Ball->first = 0.F;
         es.pprr_Ball->second = (float)(-0.5 + rng());
     }
-    float rBallVelocity = rMakeBallVelocity();
-    float rBallMovementDirection;
-    do {
-        rBallMovementDirection = (float)rng(2 * M_PI);
-        prr_BallSpeed.first = rBallVelocity * sin(rBallMovementDirection);
-    } while (prr_BallSpeed.first < 1. / (2 * maxSpotPassageTime_ms) || !bPunishment && prr_BallSpeed.first < 0.);
-    prr_BallSpeed.second = rBallVelocity * cos(rBallMovementDirection);
+    prr_BallSpeed = prr_MakeBallVelocity(bPunishment);
 
     // It is a special temporary regime for intermediate goal mechanism training data creation.
 
