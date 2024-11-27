@@ -31,7 +31,9 @@ CHROMOSOME_DEFINITION
     INITIALIZE_GENE(MAXWEIGHT, rng.logUniform(0.3, 3.)),
     INITIALIZE_GENE(STABILITYRESOURCECHANGERATIO, rng.logUniform(0.03, 30)),
     INITIALIZE_GENE(LATERALBLOCKINGTIME, rng.logUniform(1, 100)),
-    INITIALIZE_GENE(ACTIONEVALUATIONTIME, rng.logUniform(3, 100))
+    INITIALIZE_GENE(ACTIONEVALUATIONTIME, rng.logUniform(3, 100)),
+    INITIALIZE_GENE(PUNISHMENT_SWITCH_THTRESHOLD, rng.logUniform(0.003, 0.5)),
+    INITIALIZE_GENE(REWARD_SWITCH_THTRESHOLD, rng.logUniform(0.003, 0.5))
 };
 #define NO_GENE_DEPENDENCIES
 //------------------------------------------------------------------------------------------------
@@ -57,7 +59,8 @@ int StructuralCriterion(int)
 unsigned Experiment = 3000;
 //------------------------------------------------------------------------------------------------
 // $$$ SET CUSTOM PARAMETER BOUNDARIES
-bool bBadHyperparameters(const vector<int> &v_point, const vector<dimension> &vdim_) {return V("NLEARNINGGROUPS") < 1 || V("PUNISHMENT_SWITCH_THTRESHOLD" > 0.5 || V("REWARD_SWITCH_THTRESHOLD" > 0.5;}
+bool bBadHyperparameters(const vector<int> &v_point, const vector<dimension> &vdim_) {return V(NNEURONSPERACTION) < 1 || V(PUNISHMENT_SWITCH_THTRESHOLD) > 0.5 || V(REWARD_SWITCH_THTRESHOLD) > 0.5;}
+
 //------------------------------------------------------------------------------------------------
 #endif   // ARNI_CD defined
 
@@ -90,6 +93,8 @@ EVALUATOR
     SUBVINT(PLASTICITYTIME);
     SUBV(MAXWEIGHT);
     SUBV(STABILITYRESOURCECHANGERATIO);
+    SUBV(PUNISHMENT_SWITCH_THTRESHOLD);
+    SUBV(REWARD_SWITCH_THTRESHOLD);
     SUBVINT(LATERALBLOCKINGTIME);
     SUBVINT(ACTIONEVALUATIONTIME);
     SUBVINT(NNEURONSPERACTION);

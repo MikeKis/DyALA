@@ -169,6 +169,7 @@ protected:
         ++ntact;
         UpdateWorld(vr_CurrentPhaseSpacePoint);
 
+#ifdef LOG_STATE
         static ofstream ofsState("ping_pong_state.csv");
         if (ofsState.is_open()) {
             ofsState << ntact;
@@ -176,6 +177,7 @@ protected:
                 ofsState << ',' << z;
             ofsState << endl;
         }
+#endif
 
         fill(pfl, pfl + AfferentSpikeBufferSizeDW(GetNReceptors()), 0);
 
@@ -443,7 +445,7 @@ bool bState(bool bRewardRequested)
     static bool bLastChangetoGoodTrue;
     static int FormerState = -1;
     static int FormerStateTrue = -1;
-    static int CurrentStateTrue, CurrentState;
+    static int CurrentStateTrue, CurrentState = -1;
     if (!bRewardRequested) {   // punishment is requested first
 
         if (InputBlockCounter || any_of(aqpind_, aqpind_ + sizeof(aqpind_) / sizeof(aqpind_[0]), [](const deque<pair<int, int> > &qpind_){return qpind_.empty();})) {
@@ -452,7 +454,6 @@ bool bState(bool bRewardRequested)
             return false;
         }
 
-        double dx, dy, dvx, dvy, dry;
         CurrentStateTrue = State(vr_CurrentPhaseSpacePoint[0], vr_CurrentPhaseSpacePoint[1], vr_CurrentPhaseSpacePoint[2], vr_CurrentPhaseSpacePoint[3], vr_CurrentPhaseSpacePoint[4]);
         CurrentState = StatefromRF(CurrentState) /* StatefromSpikes() */;
 
@@ -497,33 +498,24 @@ bool bState(bool bRewardRequested)
         bCurrentStateOK = !CurrentState;
 #endif
 
+#ifdef LOG_STATE
         static ofstream ofsState("ping_pong_state_rest.csv");
         static bool bHeaderWritten = false;
         if (!bHeaderWritten) {
-            ofsState << "tact,x,xp,y,yp,vx,vxp,vy,vyp,yr,yrp,state,statep,tactchage,tactchangep,goodchange,goodchagep,dec,decp\n";
+            ofsState << "tact,x,y,vx,vy,yr,state,statep,tactchage,tactchangep,goodchange,goodchagep,dec,decp\n";
             bHeaderWritten = true;
         }
         ofsState << ntact
                  << ','
                  << vr_CurrentPhaseSpacePoint[0]
                  << ','
-                 << dx
-                 << ','
                  << vr_CurrentPhaseSpacePoint[1]
-                 << ','
-                 << dy
                  << ','
                  << vr_CurrentPhaseSpacePoint[2]
                  << ','
-                 << dvx
-                 << ','
                  << vr_CurrentPhaseSpacePoint[3]
                  << ','
-                 << dvy
-                 << ','
                  << vr_CurrentPhaseSpacePoint[4]
-                 << ','
-                 << dry
                  << ','
                  << CurrentStateTrue
                  << ','
@@ -541,6 +533,7 @@ bool bState(bool bRewardRequested)
                  << ','
                  << (ntact - tactLastStateChange == StateChangeDelay ? (bLastChangetoGood ? "1" : "-1") : "0")
                  << endl;
+#endif
 
     }
 #ifdef EXACT_STATE_EVALUATION
@@ -645,8 +638,8 @@ RECEPTORS_SET_PARAMETERS(pchMyReceptorSectionName, nReceptors, xn)
         else if (nReceptors != 1)
             throw std::runtime_error("SECPUN - wrong input node count");
         StateChangeDelay = atoi_s(xn.child_value("state_change_delay"));
-        rPunishmentSwitchThreshold = atoi_s(xn.child_value("punishment_switch_threshold"));
-        rRewardSwitchThreshold = atoi_s(xn.child_value("reward_switch_threshold"));
+        rPunishmentSwitchThreshold = atof_s(xn.child_value("punishment_switch_threshold"));
+        rRewardSwitchThreshold = atof_s(xn.child_value("reward_switch_threshold"));
         return new SecondaryEvaluator(false);
     } else if (!strcmp(pchMyReceptorSectionName, "SECREW")) {
         if (nReceptors < 0)
