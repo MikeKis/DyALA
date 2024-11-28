@@ -556,7 +556,7 @@ public:
     SecondaryEvaluator(bool brew) : bReward(brew)
     {
         if (!brew) {
-            std::ifstream ifsRF("ping-pong.RF.bin");
+            std::ifstream ifsRF("ping-pong.RF.bin", std::ios::binary);
             uprfr.reset(dynamic_cast<RFRes *>(rf.pmlmLoadModel(ifsRF)));
         }
     }

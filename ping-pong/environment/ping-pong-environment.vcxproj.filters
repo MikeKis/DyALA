@@ -21,21 +21,12 @@
     <ClInclude Include="ping-pong-environment.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AdaptiveSpikeSource.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="EnvironmentState.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\pugixml-1.10\src\pugixml.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="AdaptiveSpikeSource.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="EnvironmentState.cpp">

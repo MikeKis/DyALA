@@ -141,11 +141,11 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <Optimization>Disabled</Optimization>
+      <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_WIN32_WINNT=0x0a00;NDEBUG;PINGPONGENVIRONMENT_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>LOG_STATE;_WIN32_WINNT=0x0a00;NDEBUG;PINGPONGENVIRONMENT_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>
       </PrecompiledHeaderFile>
@@ -159,17 +159,15 @@
       <EnableUAC>false</EnableUAC>
       <AdditionalLibraryDirectories>..\..\..\boost\stage\lib</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>ping-pong-environment.def</ModuleDefinitionFile>
+      <AdditionalDependencies>..\..\..\ArNI\lib\ArNI.lib;..\..\..\ArNI\lib\DatTab.lib;..\..\..\ArNI\lib\RF.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="AdaptiveSpikeSource.hpp" />
     <ClInclude Include="EnvironmentState.hpp" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="ping-pong-environment.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\pugixml-1.10\src\pugixml.cpp" />
-    <ClCompile Include="AdaptiveSpikeSource.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="EnvironmentState.cpp" />
     <ClCompile Include="ping-pong-environment-rea.cpp" />
