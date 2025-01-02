@@ -5,13 +5,9 @@
 
     <!--NOT USED NOW-->
 
-  <RECEPTORS name="Punishment" n="1">
+  <RECEPTORS name="Evaluation" n="2"> <!--#0 - punishment, #1 - reward-->
     <Implementation lib="ping-pong-environment"></Implementation>
   </RECEPTORS>
-  <RECEPTORS name="Reward" n="1">
-    <Implementation lib="ping-pong-environment"></Implementation>
-  </RECEPTORS>
-  
   <RECEPTORS name="R" n="$(NINPUTS)">
     <Implementation lib="ping-pong-environment"></Implementation>
   </RECEPTORS>
