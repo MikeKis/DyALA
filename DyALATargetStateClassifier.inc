@@ -5,7 +5,10 @@
 //------------------------------------------------------------------------------------------------
 // $$$ COMMON DEFINES
 #define MAXEMULATIONTIME 2000000
-#define NINPUTS 175
+#define LEARNINGTIME 1000000
+#define NINPUTS 150
+#define CAUSAL_LINK_DURATION 10
+#define NCONSEQUENCES 2
 #define NTESTS 3
 #define SECOND_TEST_THRESHOLD 0x7fffffff   // DO NOT USE PROTOCOL POSTPROCESSOR !!
 //------------------------------------------------------------------------------------------------
@@ -20,17 +23,13 @@ NetworkTestingParams ntpG{EMULATOR, RECOGNIZER, NTESTS, SECOND_TEST_THRESHOLD, N
 
 CHROMOSOME_DEFINITION
 {
-    INITIALIZE_GENE(NNEURONSPERACTION, rng.logUniform(1, 30)),
+    INITIALIZE_GENE(NNEURONSPERCONSEQUENCE, rng.logUniform(1, 30)),
     INITIALIZE_GENE(LCHARTIME, rng.logUniform(1, 30)),
-    INITIALIZE_GENE(LTHRESHOLDDECAYPERIOD, rng.logUniform(1, 3000)),
-    INITIALIZE_GENE(LTHRESHOLDINC, rng.logUniform(1, 300)),
-    INITIALIZE_GENE(PLASTICITYTIME, rng.logUniform(3, 100)),
+    INITIALIZE_GENE(LEARNINGRATE, rng.logUniform(0.1, 3.)),
     INITIALIZE_GENE(MAXWEIGHT, rng.logUniform(0.3, 3.)),
+    INITIALIZE_GENE(MINWEIGHT, rng.logUniform(0.003, 3.)),
     INITIALIZE_GENE(STABILITYRESOURCECHANGERATIO, rng.logUniform(0.03, 30)),
-    INITIALIZE_GENE(LATERALBLOCKINGTIME, rng.logUniform(1, 100)),
-    INITIALIZE_GENE(ACTIONEVALUATIONTIME, rng.logUniform(3, 100)),
-    INITIALIZE_GENE(PUNISHMENT_SWITCH_THTRESHOLD, rng.logUniform(0.003, 0.5)),
-    INITIALIZE_GENE(REWARD_SWITCH_THTRESHOLD, rng.logUniform(0.003, 0.5))
+    INITIALIZE_GENE(NSILENTSYNAPSES, rng.logUniform(1, 1000))
 };
 #define NO_GENE_DEPENDENCIES
 //------------------------------------------------------------------------------------------------
@@ -73,28 +72,27 @@ EVALUATOR
 
 //------------------------------------------------------------------------------------------------
 // $$$ SPECIFY NNP FILE
-    SETNNP(".." FOLDER_SEPARATOR "Experiments" FOLDER_SEPARATOR "ManualStateClassification.nnp");
+    SETNNP(".." FOLDER_SEPARATOR "Experiments" FOLDER_SEPARATOR "TargetStateClassification.nnp");
 //------------------------------------------------------------------------------------------------
 // $$$ SUBSTITUTE ALL VALUES
 
-    SUBMACRO(STIMULATIONTIME);
     SUBMACRO(NINPUTS);
+    SUBMACRO(LEARNINGTIME);
+    SUBMACRO(CAUSAL_LINK_DURATION);
+    SUBMACRO(NCONSEQUENCES);
 
-    SUBVALUE("NNEU", nint(V(NNEURONSPERACTION)) * 2);
-    SUBV(LTHRESHOLDINC);
+    SUBVALUE("CAUSES", "R");
+    SUBVALUE("CONSEQUENCES", "Evaluation");
 
-    SUBV(ACTIONSTEP);   // racket sfift causing ACTIONS firing
-    SUBVINT(MAXIDLETIME);  // no-action time after which external stimalation is switched on
+    SUBVINT(NNEURONSPERCONSEQUENCE);
+    SUBVALUE("NLEARNERS", nint(V(NNEURONSPERCONSEQUENCE)) * NCONSEQUENCES);
     SUBVINT(LCHARTIME);
-    SUBVINT(LTHRESHOLDDECAYPERIOD);
-    SUBVINT(PLASTICITYTIME);
+    SUBV(LEARNINGRATE);
     SUBV(MAXWEIGHT);
+    SUBV(MINWEIGHT);
     SUBV(STABILITYRESOURCECHANGERATIO);
-    SUBV(PUNISHMENT_SWITCH_THTRESHOLD);
-    SUBV(REWARD_SWITCH_THTRESHOLD);
-    SUBVINT(LATERALBLOCKINGTIME);
-    SUBVINT(ACTIONEVALUATIONTIME);
-    SUBVINT(NNEURONSPERACTION);
+    SUBVINT(NSILENTSYNAPSES);
+    SUBVALUE("INIRESOURCE0", rWeight0Resource(-V(MINWEIGHT), V(MAXWEIGHT)));
 
 //------------------------------------------------------------------------------------------------
 
@@ -142,7 +140,7 @@ EVALUATOR
             vstr_argsEmulator[2] = "-R";
 //------------------------------------------------------------------------------------------------
 // $$$ SPECIFY ADDITIONAL EMULATOR COMMAND LINE OPTIONS
-            vstr_argsEmulator.back() = "-RS";
+            vstr_argsEmulator.back() = "-R";
             vstr_argsEmulator.push_back("-T" + str(MAXEMULATIONTIME));
 //------------------------------------------------------------------------------------------------
 #ifndef USE_CPU

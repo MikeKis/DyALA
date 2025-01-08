@@ -18,70 +18,12 @@
     	</args>
     </Implementation>
   </RECEPTORS>
-  <RECEPTORS name="GrowingStimulation" n="60">
-    <Implementation lib="ping-pong-environment">
-    	<args>
-        	<maxidletime>100</maxidletime>
-    	</args>
-    </Implementation>
-    <Structure type="L">
-	<dim>30</dim>
-	<dim>2</dim>
-    </Structure>   
-  </RECEPTORS>
-  <NETWORK>
-	<Sections>
-	  <Section name="L">
-	    <props>
-	      <n>$(NNEU)</n>
-    	      <Structure type="L">
-		<dim>$(NNEURONSPERACTION)</dim>
-		<dim>2</dim>
-              </Structure>   
-	      <chartime>$(LCHARTIME)</chartime>
-	      <three_factor_plasticity></three_factor_plasticity>
-	      <threshold_decay_period>$(LTHRESHOLDDECAYPERIOD)</threshold_decay_period>
-	      <threshold_inc>$(LTHRESHOLDINC)</threshold_inc>
-	      <weight_inc>0</weight_inc>
-	      <dopamine_plasticity_time>$(PLASTICITYTIME)</dopamine_plasticity_time>
-	      <minweight>0</minweight>
-	      <maxweight>$(MAXWEIGHT)</maxweight>
-	      <stability_resource_change_ratio>$(STABILITYRESOURCECHANGERATIO)</stability_resource_change_ratio>
-	      <nsilentsynapses>0</nsilentsynapses>
-	    </props>
-	  </Section>
-	  <Section name="GATEREW">
-	    <props>
-	      <n>2</n>
-	    </props>
-	  </Section>
-	  <Link from="R" to="L" type="plastic" policy="all-to-all">
-		  <IniResource type="uni">
-		    <min>0</min>
-		    <max>0</max>
-		  </IniResource>
-	  </Link>
-	  <Link from="L" to="L" type="gating" policy="all-to-all">
-	  	<weight>-$(LATERALBLOCKINGTIME)</weight>
-	  </Link>
-	  <Link from="GrowingStimulation" to="L" policy="all-to-all-sections">
-	  	<weight>0.3</weight>
-	  </Link>
-	  <Link from="SECREW" to="GATEREW" policy="all-to-all">
-	  	<weight>10</weight>
-	  </Link>
-	  <Link from="GATEREW" to="L" type="reward" policy="aligned">
-	    <weight>1</weight>
-	  </Link>
-	  <Link from="Actions" to="GATEREW" type="gating" policy="aligned">
-	    <weight>$(ACTIONEVALUATIONTIME)</weight>
-	  </Link>
-	</Sections>
-  </NETWORK>
+\causal.nnp
   <Readout lib="ping-pong-environment">
-    <output>L</output>
+    <output>WTA</output>
     <args>
-	<start_time>$(STIMULATIONTIME)</start_time>
+	<start_time>$(LEARNINGTIME)</start_time>
+	<prediction_period>$(CAUSAL_LINK_DURATION)</prediction_period>
     </args>
   </Readout>
 </SNN>  

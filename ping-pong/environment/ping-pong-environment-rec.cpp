@@ -32,6 +32,19 @@ extern bool b_forVerifier_Reward;
 extern int nerrRF;
 extern int ncorrRF;
 
+extern int PredictionPeriod;
+
+extern int tactlastPunishmentPrediction;
+extern int tactlastRewardPrediction;
+
+extern int nPredictedPunishments;
+extern int nPredictedRewards;
+extern int nPredictedPunishmentsTot;
+extern int nPredictedRewardsTot;
+
+extern int tactPredictedPunishmentLim;
+extern int tactPredictedRewardLim;
+
 int nGoalLevels;
 
 int ntact = -1;
@@ -72,12 +85,24 @@ public:
             ++nPunishments;
             *pfl = 1;
             InputBlockCounter = afterRewardSilence;
+            if (tactlastPunishmentPrediction >= ntact - PredictionPeriod) {
+                if (ntact >= tactStart)
+                    ++nPredictedPunishmentsTot;
+                ++nPredictedPunishments;
+            }
+            tactPredictedPunishmentLim = -1;
         } else if (es.pprr_Ball->first == -0.5F) {
             if (ntact >= tactStart)
                 ++nRewardsTot;
             ++nRewards;
             *pfl = 2;
             InputBlockCounter = afterRewardSilence;
+            if (tactlastRewardPrediction >= ntact - PredictionPeriod) {
+                if (ntact >= tactStart)
+                    ++nPredictedRewardsTot;
+                ++nPredictedRewards;
+            }
+            tactPredictedRewardLim = -1;
         } else *pfl = 0;
         return true;
     }
