@@ -127,7 +127,7 @@ PING_PONG_ENVIRONMENT_EXPORT int Finalize(int OriginalTerminationCode)
     float rRecallReward = (float)nPredictedRewardsTot / nRewardsTot;
     float rFPunishment = rPrecisionPunishment && rRecallPunishment ? 2 / (1 / rPrecisionPunishment + 1 / rRecallPunishment) : 0.F;
     float rFReward = rPrecisionReward && rRecallReward ? 2 / (1 / rPrecisionReward + 1 / rRecallReward) : 0.F;
-    return 10000 * (rFPunishment + rFReward) / 2;
+    return 10000 * (rFPunishment / nPunishmentsTot  + rFReward / nRewardsTot) / (1. / nPunishmentsTot  + 1. / nRewardsTot);
 }
 
 PING_PONG_ENVIRONMENT_EXPORT void Serialize(Serializer &ser, bool bSave) {}
