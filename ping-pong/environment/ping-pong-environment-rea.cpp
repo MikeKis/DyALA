@@ -28,7 +28,7 @@ extern int nCorr;
 
 int nNeuronsperAction = 0;
 
-PING_PONG_ENVIRONMENT_EXPORT void SetParametersOut(int ExperimentId, size_t tactTermination, unsigned nOutputNeurons, const pugi::xml_node &xn) 
+READOUT_SET_PARAMETERS(ExperimentId, tactTermination, nOutputNeurons, xn)
 {
 	nNeuronsperAction = (int)nOutputNeurons / 2;
 	tactStart = atoi_s(xn.child("start_time").child_value());
@@ -38,8 +38,10 @@ const float rAction = 1.F / nSpatialZones;
 
 PING_PONG_ENVIRONMENT_EXPORT bool ObtainOutputSpikes(const vector<int> &v_Firing, int nEquilibriumPeriods)
 {
-	static int NoMoveTacts = 0;
-	int nCommandsDown = count_if(v_Firing.begin(), v_Firing.end(), bind2nd(less<int>(), nNeuronsperAction));
+    using namespace std::placeholders;
+
+    static int NoMoveTacts = 0;
+    int nCommandsDown = count_if(v_Firing.begin(), v_Firing.end(), bind(less<int>{}, _1, nNeuronsperAction));
 	auto r = rAction * ((int)v_Firing.size() - 2 * nCommandsDown);
 	auto rsav = *es.prRacket;
 	*es.prRacket += r;
