@@ -16,7 +16,7 @@ int nNeurons;
 pair<int, int> p_LREWRange;
 int indREWNORM;
 
-PING_PONG_ENVIRONMENT_EXPORT void GetSections(const vector<pair<string, unsigned> > &vpstrn_Sections)
+DYNAMIC_LIBRARY_ENTRY_POINT void GetSections(const vector<pair<string, unsigned> > &vpstrn_Sections)
 {
 	vpstrn_sec = vpstrn_Sections;
 	nNeurons = 0;
@@ -36,7 +36,7 @@ int LastRegistration = -1000000;
 bool b_forVerifier_Reward = false;
 int nCorr = 0;
 
-PING_PONG_ENVIRONMENT_EXPORT void ObtainSpikes(const vector<int> &v_Firing, string &strFatal)
+DYNAMIC_LIBRARY_ENTRY_POINT void ObtainSpikes(const vector<int> &v_Firing, string &strFatal)
 {
 	if (!PostRewardCounter && find(v_Firing.begin(), v_Firing.end(), indREWNORM) != v_Firing.end())
 		++nRecognitions;

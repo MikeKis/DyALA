@@ -153,16 +153,6 @@ protected:
             set_input_spike(nSpatialZones * 2 + indvxBall);
             set_input_spike(nSpatialZones * 2 + nVelocityZones + indvyBall);
             set_input_spike(nSpatialZones * 2 + nVelocityZones * 2 + indRacket);
-            int indxRel = (int)((vr_CurrentPhaseSpacePoint[0] + 0.5) / rRelPosStep);
-            if (indxRel < nRelPos) {
-                int indyRel = (int)((vr_CurrentPhaseSpacePoint[4] - vr_CurrentPhaseSpacePoint[1] + rRelPosStep / 2) / rRelPosStep);   // Raster goes from top (higher y) to bottom - in opposite
-                // direction to y axis
-                if (abs(indyRel) <= (nRelPos - 1) / 2) {
-                    indyRel += (nRelPos - 1) / 2;
-                    indRaster = indyRel * nRelPos + indxRel;
-                    set_input_spike(nSpatialZones * 3 + nVelocityZones * 2 + indRaster);
-                }
-            }
         } else --InputBlockCounter;
         copy(vfl_.begin(), vfl_.end(), pfl);
 
@@ -198,12 +188,6 @@ protected:
             ss << "ry" << x;
             vstr_Meanings[i++] = ss.str();
         }
-        for (y = nRelPos / 2; y >= -nRelPos / 2; --y)
-            for (x = 0; x < nRelPos; ++x) {
-                stringstream ss;
-                ss << "REL(" << x << "," << y << ")";
-                vstr_Meanings[i++] = ss.str();
-            }
     }
 public:
     rec_ping_pong(): vr_VelocityZoneBoundary((nVelocityZones - 1) / 2), vass_(nInputs)
@@ -295,7 +279,7 @@ RECEPTORS_SET_PARAMETERS(pchMyReceptorSectionName, nReceptors, xn)
 	}
 }
 
-PING_PONG_ENVIRONMENT_EXPORT IReceptors *LoadStatus(Serializer &ser)
+DYNAMIC_LIBRARY_ENTRY_POINT IReceptors *LoadStatus(Serializer &ser)
 {
 	static int CallNo = 0;
 	rec_ping_pong *prpp;
