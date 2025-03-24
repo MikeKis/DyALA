@@ -52,6 +52,8 @@
 		<maxweightenter>$(MAXWEIGHT)</maxweightenter>
 	      	<stability_resource_change_ratio_enter>$(STABILITYRESOURCECHANGERATIO)</stability_resource_change_ratio_enter>
                 <nsilentsynapses>$(NSILENTSYNAPSES)</nsilentsynapses>
+                <chartimeenter>$(CHARTIME)</chartimeenter>
+                <hebbian_plasticity_chartime_ratio_enter>$(HEBBIANPLASTICITYCHARTIMERATIO)</hebbian_plasticity_chartime_ratio_enter>
     	</args>
     </Implementation>
     <Sections>
