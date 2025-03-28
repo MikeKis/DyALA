@@ -162,7 +162,7 @@ protected:
     {
         vstr_Meanings.resize(nInputs);
         int i = 0;
-        int x, y;
+        int x;
         for (x = 0; x < nSpatialZones; ++x) {
             stringstream ss;
             ss << "x" << x;
