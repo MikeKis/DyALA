@@ -62,6 +62,8 @@
                 <chartimeenter>$(CHARTIMEENTER)</chartimeenter>
                 <chartimecont>$(CHARTIMECONT)</chartimecont>
                 <hebbian_plasticity_chartime_ratio_enter>$(HEBBIANPLASTICITYCHARTIMERATIO)</hebbian_plasticity_chartime_ratio_enter>
+                <maxstimulationtimeenter>$(MAXSTIMULATIONTIMEENTER)</maxstimulationtimeenter>
+                <maxstimulationtimecont>$(MAXSTIMULATIONTIMECONT)</maxstimulationtimecont>
                 <learning_time>1400000</learning_time>
     	</args>
     </Implementation>
