@@ -43,17 +43,26 @@
     			<n>9</n>
     			<n>9</n>
     		</input_WTA_section_sizes>
-    		<nmicrocolumnsenter>$(NLEARNINGGROUPS)</nmicrocolumnsenter>
-                <wthrexcessenter>$(WTHREXCESS)</wthrexcessenter>
-                <dwenter>$(DWPOS)</dwenter>
-                <relnegdwenter>$(RELDWNEG)</relnegdwenter>
+    		<nmicrocolumnsenter>$(NLEARNINGGROUPSENTER)</nmicrocolumnsenter>
+    		<nmicrocolumnscont>$(NLEARNINGGROUPSCONT)</nmicrocolumnscont>
+                <wthrexcessenter>$(WTHREXCESSENTER)</wthrexcessenter>
+                <wthrexcesscont>$(WTHREXCESSCONT)</wthrexcesscont>
+                <dwenter>$(DWPOSENTER)</dwenter>
+                <dwcont>$(DWPOSCONT)</dwcont>
+                <relnegdwenter>$(RELDWNEGENTER)</relnegdwenter>
+                <relnegdwcont>$(RELDWNEGCONT)</relnegdwcont>
                 <time_scale>10</time_scale>
-		<minweightenter>$(MINWEIGHT)</minweightenter>
-		<maxweightenter>$(MAXWEIGHT)</maxweightenter>
-	      	<stability_resource_change_ratio_enter>$(STABILITYRESOURCECHANGERATIO)</stability_resource_change_ratio_enter>
+		<minweightenter>$(MINWEIGHTENTER)</minweightenter>
+		<maxweightenter>$(MAXWEIGHTENTER)</maxweightenter>
+		<minweightcont>$(MINWEIGHTCONT)</minweightcont>
+		<maxweightcont>$(MAXWEIGHTCONT)</maxweightcont>
+	      	<stability_resource_change_ratio_enter>$(STABILITYRESOURCECHANGERATIOENTER)</stability_resource_change_ratio_enter>
+	      	<stability_resource_change_ratio_cont>$(STABILITYRESOURCECHANGERATIOCONT)</stability_resource_change_ratio_cont>
                 <nsilentsynapses>$(NSILENTSYNAPSES)</nsilentsynapses>
-                <chartimeenter>$(CHARTIME)</chartimeenter>
+                <chartimeenter>$(CHARTIMEENTER)</chartimeenter>
+                <chartimecont>$(CHARTIMECONT)</chartimecont>
                 <hebbian_plasticity_chartime_ratio_enter>$(HEBBIANPLASTICITYCHARTIMERATIO)</hebbian_plasticity_chartime_ratio_enter>
+                <learning_time>1400000</learning_time>
     	</args>
     </Implementation>
     <Sections>
@@ -72,9 +81,11 @@
     <args></args>
    </Readout>
    <Readout lib="MultistatePredictor">
-    <output>R</output>
-    <output>OUT</output>
+    <output>MEMORYT</output>
+    <output>OUTenter</output>
+    <output>OUTcont</output>
     <args>
+	<nperiods>4</nperiods>
     	<min_prediction_period>10</min_prediction_period>   <!--predicting TSS should stop not earlier than this time before state beginning-->
     	<max_prediction_period>30</max_prediction_period>   <!--predicting TSS should begin not earlier than this time before state beginning-->
     	<max_prediction_ISI>10</max_prediction_ISI>
