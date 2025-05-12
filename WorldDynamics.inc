@@ -5,12 +5,11 @@
 //------------------------------------------------------------------------------------------------
 // $$$ COMMON DEFINES
 #define MAXEMULATIONTIME 2000000
-#define NTESTS 3
 #define SECOND_TEST_THRESHOLD 0x7fffffff   // DO NOT USE PROTOCOL POSTPROCESSOR !!
 #define LEARNINGGROUPSIZE 1                // because afferent connections are all-to-all
 //------------------------------------------------------------------------------------------------
 
-NetworkTestingParams ntpG{EMULATOR, RECOGNIZER, NTESTS, SECOND_TEST_THRESHOLD, NoStructuralCriterion};
+NetworkTestingParams ntpG{EMULATOR, RECOGNIZER, SECOND_TEST_THRESHOLD, NoStructuralCriterion};
 
 //------------------------------------------------------------------------------------------------
 // $$$ DEFINE OPTIMIZED VARIABLES - only variable names are used in code - to determine variable position. The array is read by an optimization control program.
@@ -142,7 +141,7 @@ EVALUATOR
 #endif
 
 			sum = 0;
-			FORI(NTESTS) {
+			FORI(nTests) {
 				a = ExecuteProcess(EMULATOR, vstr_argsEmulator, ofsTaskLog);
 				if (a < 0) {
 					printf("\a\a\a Abnormal " EMULATOR " termination -- trying to restart few minutes later!!!\n");
@@ -175,7 +174,7 @@ EVALUATOR
 			remove(strMonitoringFile.c_str());
 			sprintf(buf, "%d.finsave.nns", CurrentExperiment);
 			remove(buf);
-			return(sum / NTESTS);
+			return(sum / nTests);
 		}
 		mutsoc.lock();
 		++vpn_ComputingDeviceStatus[SelectedDevice].first;
@@ -186,7 +185,7 @@ EVALUATOR
 		mutLog.lock();
 		ofsTaskLog << "Experiment " << CurrentExperiment << " - task sent to another cluster node at " << boost::posix_time::second_clock::local_time() << " (device " << SelectedDevice << ")" << endl;
 		mutLog.unlock();
-        int ret = CoordinateCluster(a - SHOULD_BE_LAUNCHED_ON_ANOTHER_NODE, SelectedDevice, vstr_argsEmulator, ssNNC.str(), strLog);
+        int ret = CoordinateCluster(a - SHOULD_BE_LAUNCHED_ON_ANOTHER_NODE, SelectedDevice, vstr_argsEmulator, nTests, ssNNC.str(), strLog);
 		if (strLog.length()) {
 			mutsoc.lock();
 			--vpn_ComputingDeviceStatus[SelectedDevice].first;
