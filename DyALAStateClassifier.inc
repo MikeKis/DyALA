@@ -4,7 +4,7 @@
 
 //------------------------------------------------------------------------------------------------
 // $$$ COMMON DEFINES
-#define LEARNING_TIME 748940   // Because half of all time is silence.
+#define LEARNING_TIME 1468200   // Because half of all time is silence.
 #define STATE_PRESENTATION_TACTS 10   // Do not change: LCharTime = STATE_PRESENTATION_TACTS / 3
 #define INTERSTATE_SILENCE_TACTS 10
 #define NTACTPERCASE (STATE_PRESENTATION_TACTS + INTERSTATE_SILENCE_TACTS)
@@ -17,6 +17,7 @@
 #define NTARGETCLASSES 1
 #define NNETWORKCOPIES 1                   // It will be optimized by cooredinate descent
 #define LEARNINGGROUPSIZE 1
+#define CRITERION "Rsquared"
 #define TARGETBIAS 3                       // ONLY HERE!! In fact, it is ceil(THRESHOLD_BASE * 0.001) / (LCharTime * (1 - pow(1 - 1. / LCharTime, STATE_PRESENTATION_TACTS)))
 //------------------------------------------------------------------------------------------------
 
@@ -89,9 +90,10 @@ EVALUATOR
     SUBMACRO(NINPUTS);
     SUBMACRO(NTACTPERCASE);
     SUBMACRO(TARGETBIAS);
+    SUBMACRO(CRITERION);
     SUBVALUE("NSTATES", NTARGETCLASSES);
     SUBVALUE("NO_CLASS_LABEL", "0");
-    SUBVALUE("CRITERION", "averaged_F");
+    SUBVALUE("NO_CLASS_VALUE", "0");
     SUBVALUE("OUTPUT", "OUT");
     SUBVALUE("INPUT", "R");
     SUBVALUE("REWARD", "Target");
@@ -111,7 +113,7 @@ EVALUATOR
     SUBV(THRESHOLDWINC);
     SUBV(HEBBIANPLASTICITYCHARTIMERATIO);
     SUBVINT(NSILENTSYNAPSES);
-//    EXCLUDESECTION("CONVOLUTION");
+    EXCLUDESECTION("SEQUENTIAL_TRAIN");
 //------------------------------------------------------------------------------------------------
 
 #ifndef ARNI_CD

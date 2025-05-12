@@ -58,7 +58,7 @@ protected:
             vstr_Meanings.front() = typ == reward ? "REW" : "PUN";
             }
 public:
-    Evaluator(enum Evaluator::type t, size_t tactbeg = 0) : IReceptors(1), typ(t) {}
+    Evaluator(enum Evaluator::type t, size_t tactbeg = 0): typ(t) {}
     virtual bool bGenerateSignals(unsigned *pfl, int bitoffset) override
     {
         switch (typ) {
@@ -131,10 +131,6 @@ protected:
                 ofsState << ',' << z;
             ofsState << endl;
         }
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/master
 
         indxBall = (int)((vr_CurrentPhaseSpacePoint[0] + 0.5) / (1. / nSpatialZones));
         if (indxBall == nSpatialZones)
@@ -149,7 +145,7 @@ protected:
         indRacket = (int)((vr_CurrentPhaseSpacePoint[4] + 0.5) / (1. / nSpatialZones));
         if (indRacket == nSpatialZones)
             indRacket = nSpatialZones - 1;
-        vector<unsigned> vfl_(AfferentSpikeBufferSizeDW(nReceptors), 0);
+        vector<unsigned> vfl_(AfferentSpikeBufferSizeDW(GetNReceptors()), 0);
         if (!InputBlockCounter) {
 #define set_input_spike(ind) if (vass_[ind].bFire()) &vfl_.front() |= BitMaskAccess(ind)
             set_input_spike(indxBall);
@@ -157,16 +153,6 @@ protected:
             set_input_spike(nSpatialZones * 2 + indvxBall);
             set_input_spike(nSpatialZones * 2 + nVelocityZones + indvyBall);
             set_input_spike(nSpatialZones * 2 + nVelocityZones * 2 + indRacket);
-            int indxRel = (int)((vr_CurrentPhaseSpacePoint[0] + 0.5) / rRelPosStep);
-            if (indxRel < nRelPos) {
-                int indyRel = (int)((vr_CurrentPhaseSpacePoint[4] - vr_CurrentPhaseSpacePoint[1] + rRelPosStep / 2) / rRelPosStep);   // Raster goes from top (higher y) to bottom - in opposite
-                // direction to y axis
-                if (abs(indyRel) <= (nRelPos - 1) / 2) {
-                    indyRel += (nRelPos - 1) / 2;
-                    indRaster = indyRel * nRelPos + indxRel;
-                    set_input_spike(nSpatialZones * 3 + nVelocityZones * 2 + indRaster);
-                }
-            }
         } else --InputBlockCounter;
         copy(vfl_.begin(), vfl_.end(), pfl);
 
@@ -176,7 +162,7 @@ protected:
     {
         vstr_Meanings.resize(nInputs);
         int i = 0;
-        int x, y;
+        int x;
         for (x = 0; x < nSpatialZones; ++x) {
             stringstream ss;
             ss << "x" << x;
@@ -202,15 +188,9 @@ protected:
             ss << "ry" << x;
             vstr_Meanings[i++] = ss.str();
         }
-        for (y = nRelPos / 2; y >= -nRelPos / 2; --y)
-            for (x = 0; x < nRelPos; ++x) {
-                stringstream ss;
-                ss << "REL(" << x << "," << y << ")";
-                vstr_Meanings[i++] = ss.str();
-            }
     }
 public:
-    rec_ping_pong(): IReceptors(nInputs), vr_VelocityZoneBoundary((nVelocityZones - 1) / 2), vass_(nInputs)
+    rec_ping_pong(): vr_VelocityZoneBoundary((nVelocityZones - 1) / 2), vass_(nInputs)
     {
         vector<float> vr_samples(9000);
         for (auto &i: vr_samples) {
@@ -261,7 +241,7 @@ protected:
         vstr_Meanings[1] = "ActUp";
     }
 public:
-    Actions(): IReceptors(2) {}
+    Actions() {}
     virtual bool bGenerateSignals(unsigned *pfl, int bitoffset) override
     {
         *pfl = rPastRY == BIGREALNUMBER || rPastRY == vr_CurrentPhaseSpacePoint[4] ? 0 : rPastRY > vr_CurrentPhaseSpacePoint[4] ? 1 : 2;
@@ -282,7 +262,7 @@ public:
     }
 };
 
-PING_PONG_ENVIRONMENT_EXPORT IReceptors *SetParametersIn(int &nReceptors, const pugi::xml_node &xn)
+RECEPTORS_SET_PARAMETERS(pchMyReceptorSectionName, nReceptors, xn)
 {
 	static int CallNo = 0;
 	switch (CallNo++) {
@@ -299,7 +279,7 @@ PING_PONG_ENVIRONMENT_EXPORT IReceptors *SetParametersIn(int &nReceptors, const 
 	}
 }
 
-PING_PONG_ENVIRONMENT_EXPORT IReceptors *LoadStatus(Serializer &ser)
+DYNAMIC_LIBRARY_ENTRY_POINT IReceptors *LoadStatus(Serializer &ser)
 {
 	static int CallNo = 0;
 	rec_ping_pong *prpp;
