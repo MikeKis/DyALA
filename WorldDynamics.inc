@@ -55,7 +55,7 @@ EVALUATOR
 {
 	int a, SelectedDevice;
     if (!bNoFatalDefect(vr_))
-            return 0;
+            return pair<double, double>();
 
 // Create network configuration file and storing its contents in log file
 
@@ -114,7 +114,7 @@ EVALUATOR
     sprintf(buf, "-e%d", CurrentExperiment);
     int ntrials = 0;
 	boost::this_thread::sleep(boost::posix_time::milliseconds((CurrentExperiment % 101) * 300));
-	int sum;
+	IncrementalMean_Dispersion imd;
 	vector<string> vstr_argsEmulator;
 	do {
 		do {
@@ -140,7 +140,7 @@ EVALUATOR
 			vstr_argsEmulator.push_back(buf + 100);
 #endif
 
-			sum = 0;
+			imd = IncrementalMean_Dispersion();
 			FORI(nTests) {
 				a = ExecuteProcess(EMULATOR, vstr_argsEmulator, ofsTaskLog);
 				if (a < 0) {
@@ -152,7 +152,7 @@ EVALUATOR
 				}
 				if (a >= SHOULD_BE_LAUNCHED_ON_ANOTHER_NODE)
 					break;
-				sum += a;
+				imd.AddMonovalue(a);
 			}
 			mutsoc.lock();
 			--vpn_ComputingDeviceStatus[SelectedDevice].first;
@@ -174,7 +174,7 @@ EVALUATOR
 			remove(strMonitoringFile.c_str());
 			sprintf(buf, "%d.finsave.nns", CurrentExperiment);
 			remove(buf);
-			return(sum / nTests);
+			return make_pair(imd.dmean(), imd.dstandard_deviation());
 		}
 		mutsoc.lock();
 		++vpn_ComputingDeviceStatus[SelectedDevice].first;
@@ -185,16 +185,16 @@ EVALUATOR
 		mutLog.lock();
 		ofsTaskLog << "Experiment " << CurrentExperiment << " - task sent to another cluster node at " << boost::posix_time::second_clock::local_time() << " (device " << SelectedDevice << ")" << endl;
 		mutLog.unlock();
-        int ret = CoordinateCluster(a - SHOULD_BE_LAUNCHED_ON_ANOTHER_NODE, SelectedDevice, vstr_argsEmulator, nTests, ssNNC.str(), strLog);
+        auto pdd_ret = pdd_CoordinateCluster(a - SHOULD_BE_LAUNCHED_ON_ANOTHER_NODE, SelectedDevice, vstr_argsEmulator, nTests, ssNNC.str(), strLog);
 		if (strLog.length()) {
 			mutsoc.lock();
 			--vpn_ComputingDeviceStatus[SelectedDevice].first;
 			mutsoc.unlock();
 			mutLog.lock();
-			ofsTaskLog << "Experiment " << CurrentExperiment << " result: " << ret << endl;
+			ofsTaskLog << "Experiment " << CurrentExperiment << " result: " << pdd_ret.first << '/' << pdd_ret.second << endl;
 			ofsTaskLog << strLog << "\n-------------------\n";
 			mutLog.unlock();
-			return ret;
+			return pdd_ret;
 		}
 		mutLog.lock();
 		ofsTaskLog << "Experiment " << CurrentExperiment << " -- too long waiting for result -- restarting on another device\n";
