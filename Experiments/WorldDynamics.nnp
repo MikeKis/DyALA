@@ -34,15 +34,7 @@
     	<args>
     		<input>MEMORYT</input>
     		<additional_input>Actions</additional_input>
-    		<output>OUT</output>
     		<input_time_periods>4</input_time_periods>
-    		<input_WTA_section_sizes>
-    			<n>30</n>
-    			<n>30</n>
-    			<n>30</n>
-    			<n>9</n>
-    			<n>9</n>
-    		</input_WTA_section_sizes>
     		<nmicrocolumnsenter>$(NLEARNINGGROUPSENTER)</nmicrocolumnsenter>
     		<nmicrocolumnscont>$(NLEARNINGGROUPSCONT)</nmicrocolumnscont>
                 <wthrexcessenter>$(WTHREXCESSENTER)</wthrexcessenter>
