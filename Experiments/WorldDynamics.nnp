@@ -55,6 +55,9 @@
                 <chartimecont>$(CHARTIMECONT)</chartimecont>
                 <hebbian_plasticity_chartime_ratio_enter>$(HEBBIANPLASTICITYCHARTIMERATIO)</hebbian_plasticity_chartime_ratio_enter>
                 <learning_time>1400000</learning_time>
+                <ncopies>10</ncopies>
+                <outchartime>$(OUTCHARTIME)</outchartime>
+                <outw>$(OUTW)</outw>
     	</args>
     </Implementation>
     <Sections>
@@ -74,8 +77,7 @@
    </Readout>
    <Readout lib="MultistatePredictor">
     <output>MEMORYT</output>
-    <output>OUTenter</output>
-    <output>OUTcont</output>
+    <output>OUTtotal</output>
     <args>
 	<nperiods>4</nperiods>
     	<min_prediction_period>10</min_prediction_period>   <!--predicting TSS should stop not earlier than this time before state beginning-->

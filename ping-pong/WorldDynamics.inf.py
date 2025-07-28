@@ -7,7 +7,7 @@ Created on Wed Jul  2 17:44:30 2025
 """
 
 experiment = 10000
-start_tact = 1399990
+start_tact = 1499990
 ntacts = 1000
 state_inertia = 0
 
