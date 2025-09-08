@@ -1,58 +1,97 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf - 8"?>
 <SNN>
-  <Global>0</Global>
-  <Global>14.8045</Global>
-  <Global>20.5175</Global>
-  <Receptors name="Punishment" N="1">
+  <RECEPTORS name="Punishment" n="1">
     <!--NOT USED NOW-->
     <Implementation lib="ping-pong-environment"></Implementation>
-  </Receptors>
-  <Receptors name="Reward" N="1">
+  </RECEPTORS>
+  <RECEPTORS name="Reward" n="1">
     <Implementation lib="ping-pong-environment"></Implementation>
-  </Receptors>
-  <Receptors name="$$$Reward" N="4">
+  </RECEPTORS>
+  <RECEPTORS name="R" n="108">
     <Implementation lib="ping-pong-environment"></Implementation>
-  </Receptors>
-  <Receptors name="$$$Punishment" N="4">
+  </RECEPTORS>
+  <RECEPTORS name="Actions" n="2">
     <Implementation lib="ping-pong-environment"></Implementation>
-  </Receptors>
-  <Receptors name="R" N="133">
-    <Implementation lib="ping-pong-environment"></Implementation>
-  </Receptors>
-  <Network>
-    <Implementation lib="DyALA">
-      <args>
-        <NACTIONS>2</NACTIONS>
-	<NNEURONSPERACTION>37</NNEURONSPERACTION>
-	<LCHARTIME>7</LCHARTIME>
-	<LTHRESHOLDDECAYPERIOD>34</LTHRESHOLDDECAYPERIOD>
-	<LTHRESHOLDINC>187</LTHRESHOLDINC>
-	<LPLASTICITYTIME>15</LPLASTICITYTIME>
-	<LDOPAMINEPLASTICITYTIME>48</LDOPAMINEPLASTICITYTIME>
-<!--MIGRATION-->
-    	<MIGRATION></MIGRATION>
-<!--/MIGRATION-->
-	<ACTIVATIONTIME>76</ACTIVATIONTIME>
-	<WEIGHTCHANGE>0.0381379</WEIGHTCHANGE>
-	<WEIGHTRELATIVEPUNISHMENT>0.0700232</WEIGHTRELATIVEPUNISHMENT>
-	<MAXWEIGHT>1.61602</MAXWEIGHT>
-	<DEFW>1.97902</DEFW>
-	<SPARCITY>0.272421</SPARCITY>
-        <NPRIMARYSTATERECOGNIZERS>10</NPRIMARYSTATERECOGNIZERS>
-      </args>
+  </RECEPTORS>
+  <RECEPTORS name="RandomActions" n="2">
+    <Implementation lib="fromFile">
+    	<args type="none">
+	    <noise>0.03</noise>
+	</args>
     </Implementation>
-  </Network>
+  </RECEPTORS>
+  <NETWORK>
+    <Implementation lib="Time">
+    	<args>
+    		<input>R</input>
+    		<output>T</output>
+    		<minperiod>10</minperiod>
+    		<nperiods>4</nperiods>
+    		<maxISI>4</maxISI>
+    	</args>
+    </Implementation>
+    <Implementation lib="DyALA">
+    	<args>
+    		<input>MEMORYT</input>
+    		<additional_input>Actions</additional_input>
+    		<output>OUT</output>
+    		<input_time_periods>4</input_time_periods>
+    		<input_WTA_section_sizes>
+    			<n>30</n>
+    			<n>30</n>
+    			<n>30</n>
+    			<n>9</n>
+    			<n>9</n>
+    		</input_WTA_section_sizes>
+    		<nmicrocolumnsenter>4</nmicrocolumnsenter>
+    		<nmicrocolumnscont>2</nmicrocolumnscont>
+                <wthrexcessenter>0.119453</wthrexcessenter>
+                <wthrexcesscont>0.00220345</wthrexcesscont>
+                <dwenter>0.264487</dwenter>
+                <dwcont>0.68019</dwcont>
+                <relnegdwenter>1</relnegdwenter>
+                <relnegdwcont>0.610813</relnegdwcont>
+                <time_scale>10</time_scale>
+		<minweightenter>0.095813</minweightenter>
+		<maxweightenter>4.87756</maxweightenter>
+		<minweightcont>0.0331678</minweightcont>
+		<maxweightcont>2.41571</maxweightcont>
+	      	<stability_resource_change_ratio_enter>4.73524</stability_resource_change_ratio_enter>
+	      	<stability_resource_change_ratio_cont>0.20093</stability_resource_change_ratio_cont>
+                <nsilentsynapses>164</nsilentsynapses>
+                <chartimeenter>4</chartimeenter>
+                <chartimecont>17</chartimecont>
+                <hebbian_plasticity_chartime_ratio_enter>5.42426</hebbian_plasticity_chartime_ratio_enter>
+                <maxstimulationtimeenter>3</maxstimulationtimeenter>
+                <maxstimulationtimecont>5</maxstimulationtimecont>
+                <learning_time>1400000</learning_time>
+    	</args>
+    </Implementation>
+    <Sections>
+	<Section name="N">
+		<props>
+			<n>2</n>
+		</props>
+	</Section>
+	<Link from="RandomActions" to="N" policy="aligned">
+	      <weight>10</weight>
+	</Link>
+    </Sections>
+  </NETWORK>
    <Readout lib="ping-pong-environment">
-    <output>L</output>
+    <output>N</output>
+    <args></args>
+   </Readout>
+   <Readout lib="MultistatePredictor">
+    <output>MEMORYT</output>
+    <output>OUTenter</output>
+    <output>OUTcont</output>
     <args>
-      <start_time>1000000</start_time> 
-
-      <NeuronTimeDepth>17</NeuronTimeDepth>
-      <rNSpikesperNeuronTime>2</rNSpikesperNeuronTime>
-      <LevelDuration>128</LevelDuration>
-      <minnSignificantExtraSpikes>18</minnSignificantExtraSpikes>
-
+	<nperiods>4</nperiods>
+    	<min_prediction_period>10</min_prediction_period>   <!--predicting TSS should stop not earlier than this time before state beginning-->
+    	<max_prediction_period>30</max_prediction_period>   <!--predicting TSS should begin not earlier than this time before state beginning-->
+    	<max_prediction_ISI>10</max_prediction_ISI>
+    	<learning_time>1400000</learning_time>
     </args>
    </Readout>
-  <Verifyer lib="ping-pong-environment"></Verifyer>
-</SNN>  
+</SNN>
