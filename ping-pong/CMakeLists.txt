@@ -9,5 +9,7 @@ include_directories(.)
 link_directories(/usr/local/lib) #it is - to find boost!
 
 add_subdirectory(environment)
-add_subdirectory(ping-pong-visualizer)
+if(ArNI_graphics)
+	add_subdirectory(ping-pong-visualizer)
+endif()
 

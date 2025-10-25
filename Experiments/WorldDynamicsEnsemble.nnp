@@ -55,7 +55,9 @@
                 <chartimecont>$(CHARTIMECONT)</chartimecont>
                 <hebbian_plasticity_chartime_ratio_enter>$(HEBBIANPLASTICITYCHARTIMERATIO)</hebbian_plasticity_chartime_ratio_enter>
                 <learning_time>1400000</learning_time>
-                <ncopies>1</ncopies>
+                <ncopies>10</ncopies>
+                <outchartime>$(OUTCHARTIME)</outchartime>
+                <outw>$(OUTW)</outw>
     	</args>
     </Implementation>
     <Sections>

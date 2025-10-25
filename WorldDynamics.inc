@@ -61,7 +61,7 @@ EVALUATOR
 
 //------------------------------------------------------------------------------------------------
 // $$$ SPECIFY NNP FILE
-    SETNNP(".." FOLDER_SEPARATOR "Experiments" FOLDER_SEPARATOR "WorldDynamics.nnp");
+    SETNNP(".." FOLDER_SEPARATOR "Experiments" FOLDER_SEPARATOR "WorldDynamicsEnsemble.nnp");
 
 //------------------------------------------------------------------------------------------------
 // $$$ SUBSTITUTE ALL VALUES
@@ -83,6 +83,8 @@ EVALUATOR
     SUBVINT(NSILENTSYNAPSES);
     SUBVINT(CHARTIMEENTER);
     SUBVINT(CHARTIMECONT);
+    SUBV(OUTW);
+    SUBVINT(OUTCHARTIME);
     SUBV(HEBBIANPLASTICITYCHARTIMERATIO);
 
 //    EXCLUDESECTION("CONVOLUTION");
