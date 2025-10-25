@@ -6,7 +6,7 @@ Emulates ping-pong game.
 */
 
 #include <iostream>
-#include "ping-pong-environment.h"
+#include "../ping-pong-environment.h"
 #include "EnvironmentState.hpp"
 
 using namespace std;
@@ -41,7 +41,7 @@ READOUT_OBTAIN_SPIKES(v_Firing)
     using namespace std::placeholders;
 
     static int NoMoveTacts = 0;
-    int nCommandsDown = count_if(v_Firing.begin(), v_Firing.end(), bind(less<int>{}, _1, nNeuronsperAction));
+    int nCommandsDown = (int)count_if(v_Firing.begin(), v_Firing.end(), bind(less<int>{}, _1, nNeuronsperAction));
 	auto r = rAction * ((int)v_Firing.size() - 2 * nCommandsDown);
 	auto rsav = *es.prRacket;
 	*es.prRacket += r;
