@@ -73,7 +73,7 @@ bool WorldModelTest::bGenerateSignals(unsigned* pfl, int bitoffset)
 
 void WorldModelTest::change_to(int indrec)
 {
-    int ReceptorSection = (int)(lower_bound(aindReceptorSection, aindReceptorSection + sizeof(aindReceptorSection) / sizeof(aindReceptorSection[0]), indrec / 4) - aindReceptorSection);
+    int ReceptorSection = (int)(upper_bound(aindReceptorSection, aindReceptorSection + sizeof(aindReceptorSection) / sizeof(aindReceptorSection[0]), indrec / 4) - aindReceptorSection) - 1;
     BitMaskAccess bma(aindReceptorSection[ReceptorSection] * 4);
     auto pfl = &vfl_InputSignal.front();
     FORI((aindReceptorSection[ReceptorSection + 1] - aindReceptorSection[ReceptorSection]) * 4)
