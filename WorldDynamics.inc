@@ -119,7 +119,7 @@ EVALUATOR
 	do {
 		do {
 			mutsoc.lock();
-			SelectedDevice = min_element(vpn_ComputingDeviceStatus.begin(), vpn_ComputingDeviceStatus.end()) - vpn_ComputingDeviceStatus.begin();
+			SelectedDevice = (int)(min_element(vpn_ComputingDeviceStatus.begin(), vpn_ComputingDeviceStatus.end()) - vpn_ComputingDeviceStatus.begin());
 			++vpn_ComputingDeviceStatus[SelectedDevice].first;
 			mutsoc.unlock();
 			mutLog.lock();

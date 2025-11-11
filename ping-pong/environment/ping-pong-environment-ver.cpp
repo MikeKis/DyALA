@@ -5,7 +5,7 @@ Emulates ping-pong game.
 
 */
 
-#include "ping-pong-environment.h"
+#include "../ping-pong-environment.h"
 
 using namespace std;
 

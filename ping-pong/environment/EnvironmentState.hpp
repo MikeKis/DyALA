@@ -8,7 +8,7 @@
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 
-#include "ping-pong-environment.h"
+#include "../ping-pong-environment.h"
 
 class EnvironmentState
 {
