@@ -47,6 +47,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
         boost_thread
 	pthread
 	rt
+	../../../ArNI/lib/ArNI
         )
 
                        
