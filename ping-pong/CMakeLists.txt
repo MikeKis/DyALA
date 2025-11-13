@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD 14)
 include_directories(../../ArNI)
 include_directories(.)
 link_directories(/usr/local/lib) #it is - to find boost!
+link_directories(../../ArNI/lib)
 
 add_subdirectory(environment)
 add_subdirectory(WorldModelTest)

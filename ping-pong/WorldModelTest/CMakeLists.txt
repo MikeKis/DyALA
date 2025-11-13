@@ -9,7 +9,6 @@ add_library(${PROJECT_NAME} SHARED
   WorldModelTestRea.cpp
   WorldModelTest.hpp
   ../ping-pong-environment.h
-  ../../pugixml-1.10/src/pugixml.cpp
 )
 
 set(ROOT_NAMESPACE WorldModelTest)
@@ -47,7 +46,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
         boost_thread
 	pthread
 	rt
-	../../ArNI/lib/ArNI
+	ArNIUtilities
         )
 
                        
