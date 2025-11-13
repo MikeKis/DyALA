@@ -37,7 +37,7 @@ STRING strtrans(const VECTOR<unsigned> &vfl_InputSignal)
 
 RECEPTORS_SET_PARAMETERS(pchMyReceptorSectionName, nReceptors, xn)
 {
-	pwmtG = new WorldModelTest(xn);
+	pwmtG = new WorldModelTest(xn, nReceptors);
 	return pwmtG;
 }
 

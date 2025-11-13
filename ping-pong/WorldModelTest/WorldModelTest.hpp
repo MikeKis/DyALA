@@ -15,8 +15,9 @@ class DYNAMIC_LIBRARY_EXPORTED_CLASS WorldModelTest: public IReceptors
     int              period_phase = 0;
     VECTOR<unsigned> vfl_InputSignal;
 public:
-	WorldModelTest(const pugi::xml_node &xn)
+	WorldModelTest(const pugi::xml_node &xn, int nRec)
 	{
+        SetNReceptors(nRec);
         period = 0;
         depth = 0;
         STRING strSpikesInFile;

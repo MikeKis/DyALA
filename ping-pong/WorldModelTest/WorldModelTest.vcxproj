@@ -140,7 +140,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
       <ModuleDefinitionFile>WorldModelTest.def</ModuleDefinitionFile>
-      <AdditionalDependencies>..\..\..\ArNI\lib\ArNI.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>..\..\..\ArNI\lib\ArNIUtilities.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>libboost_thread-vc143-mt-x64-1_81.lib;libboost_chrono-vc143-mt-x64-1_81.lib;libboost_filesystem-vc143-mt-x64-1_81.lib</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
