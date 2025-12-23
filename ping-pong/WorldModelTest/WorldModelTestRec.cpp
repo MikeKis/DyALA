@@ -7,32 +7,31 @@ WorldModelTest *pwmtG = NULL;
 
 const int aindReceptorSection[] = {0, 30, 60, 69, 78, 108};
 
-STRING strtrans(const VECTOR<unsigned> &vfl_InputSignal)
+WorldModelTest::WorldModelTest(const pugi::xml_node& xn, int nRec)
 {
-    const char *apchReceptorSection[] = {"x", "y", "vx", "vy", "ry"};
+    SetNReceptors(nRec);
+    period = 0;
+    depth = 0;
+    STRING strSpikesInFile;
+    GetAllParameters(xn, "period", &period, "depth", &depth, "spikes_file", &strSpikesInFile);
+    ifsspikein.open(strSpikesInFile.c_str());
+    ofsout.open("WorldModelTest.csv");
+    vfl_InputSignal.resize(AfferentSpikeBufferSizeDW(GetNReceptors()));
+    const char* apchReceptorSection[] = { "x", "y", "vx", "vy", "ry" };
     int i = 0;
     int ReceptorSection = 0;
-    std::stringstream ss;
-    auto pfl = &vfl_InputSignal.front();
-    BitMaskAccess bma;
+    vstr_MyMeanings.resize(GetNReceptors());
     while (ReceptorSection < sizeof(apchReceptorSection) / sizeof(apchReceptorSection[0])) {
-        while (!(pfl & bma)) {
-            ++bma;
-            ++i;
-            if (i == aindReceptorSection[sizeof(aindReceptorSection) / sizeof(aindReceptorSection[0]) - 1] * 4)
-                return ss.str();
-        }
-        int indReceptor = i / 4;
-        int TimePeriod = i % 4;
-        ss << apchReceptorSection[ReceptorSection];
-        int offset_in_section = indReceptor - aindReceptorSection[ReceptorSection];
         int section_size = aindReceptorSection[ReceptorSection + 1] - aindReceptorSection[ReceptorSection];
-        ss << (offset_in_section < section_size / 2 || (section_size & 1) ? -section_size / 2 + offset_in_section : -section_size / 2 + offset_in_section + 1) << '/' << TimePeriod;
-        ++i;
-        ++bma;
+        for (int offset_in_section = 0; offset_in_section < section_size; ++offset_in_section)
+            for (int TimePeriod = 0; TimePeriod < 4; ++TimePeriod) {
+                std::stringstream ss;
+                ss << apchReceptorSection[ReceptorSection];
+                ss << (ReceptorSection != 2 && ReceptorSection != 3 ? offset_in_section : offset_in_section - 4) << '/' << TimePeriod;
+                vstr_MyMeanings[i++] = ss.str();
+            }
         ++ReceptorSection;
     }
-    return ss.str();
 }
 
 RECEPTORS_SET_PARAMETERS(pchMyReceptorSectionName, nReceptors, xn)
@@ -59,7 +58,8 @@ bool WorldModelTest::bGenerateSignals(unsigned* pfl, int bitoffset)
     else if (period_phase > depth - 30)
         fill(vfl_InputSignal.begin(), vfl_InputSignal.end(), 0);
     copy(vfl_InputSignal.begin(), vfl_InputSignal.end(), pfl);
-    ofsout << strtrans(vfl_InputSignal) << endl;
+    ofsout << strtrans() << endl;
+    ofsout.flush();
     if (++period_phase == depth) {
         period_phase = 0;
         FORI(period)

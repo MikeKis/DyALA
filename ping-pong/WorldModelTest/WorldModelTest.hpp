@@ -14,19 +14,23 @@ class DYNAMIC_LIBRARY_EXPORTED_CLASS WorldModelTest: public IReceptors
     int              tactin = 0;
     int              period_phase = 0;
     VECTOR<unsigned> vfl_InputSignal;
-public:
-	WorldModelTest(const pugi::xml_node &xn, int nRec)
-	{
-        SetNReceptors(nRec);
-        period = 0;
-        depth = 0;
-        STRING strSpikesInFile;
-        GetAllParameters(xn, "period", &period, "depth", &depth, "spikes_file", &strSpikesInFile);
-        ifsspikein.open(strSpikesInFile.c_str());
-        ofsout.open("WorldModelTest.csv");
-        vfl_InputSignal.resize(AfferentSpikeBufferSizeDW(GetNReceptors()));
+    VECTOR<STRING>   vstr_MyMeanings;
+    STRING strtrans() const
+    {
+        int i;
+        int ReceptorSection = 0;
+        auto pfl = &vfl_InputSignal.front();
+        BitMaskAccess bma;
+        STRING strret;
+        FOR_(i, GetNReceptors()) 
+            if (pfl & bma++)
+                strret += vstr_MyMeanings[i] + ' ';
+        return strret;
     }
+public:
+    WorldModelTest(const pugi::xml_node& xn, int nRec);
     virtual bool bGenerateSignals(unsigned *pfl, int bitoffset) override;
+    virtual void GetMeanings(VECTOR<STRING> &vstr_Meanings) const {vstr_Meanings = vstr_MyMeanings;}
     bool operator[](int ind) const {return &vfl_InputSignal.front() & BitMaskAccess(ind);}
     void change_to(int indrec);
 };

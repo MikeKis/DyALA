@@ -4,11 +4,17 @@ Created on Mon Oct 20 11:52:26 2025
 
 @author: Kiselev_Mi
 """
+import re
 
 fileori = "WorldDynamics.snn.csv"
 fileres = "WorldDynamics.upper.snn.csv"
 
 PresynapticId = -2
+
+with open("InputMeanings.txt") as filMeanings:
+    InputMeaning = filMeanings.readlines()
+    
+InputMeaning = [s.strip() for s in InputMeaning]
 
 with open(fileori, 'rt') as filin, open(fileres, 'wt') as filout:
     lstr = filin.readlines()
@@ -59,4 +65,11 @@ with open(fileori, 'rt') as filin, open(fileres, 'wt') as filout:
                 lstr[m] = ','.join(lstrrow)
             m += 1
     for s in lstr:
-        filout.write(s + '\n')
+        m = re.search(r"(enter|cont)(\d+)", s)
+        if m == None:
+            filout.write(s + '\n')
+        else:
+            sfrom = m.group(0)
+            indinp = int(m.group(2))
+            filout.write(s.replace(sfrom, m.group(1) + '_' + InputMeaning[int(indinp)]) + '\n')
+            
