@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
 # set(CMAKE_CXX_COMPILER "/usr/bin/g++")
-set(CMAKE_CXX_STANDARD 14)
 
 project(ping-pong-environment CXX)
 
@@ -39,7 +38,6 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 
 target_compile_options(${PROJECT_NAME} PRIVATE
             -fPIC
-	    -std=c++14
             )
 
 #target_link_options(${PROJECT_NAME} PRIVATE
