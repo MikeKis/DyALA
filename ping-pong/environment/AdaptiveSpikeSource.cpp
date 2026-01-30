@@ -1,4 +1,4 @@
-#include "ping-pong-environment.h"
+#include "../ping-pong-environment.h"
 #include "AdaptiveSpikeSource.hpp"
 
 extern int ntact;

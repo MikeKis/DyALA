@@ -118,11 +118,9 @@ protected:
 #define indvxBall vind_[2]
 #define indvyBall vind_[3]
 #define indRacket vind_[4]
-#define indRaster vind_[5]
 
         ++ntact;
         UpdateWorld(vr_CurrentPhaseSpacePoint);
-
 
         static ofstream ofsState("ping_pong_state.csv");
         if (ofsState.is_open()) {
@@ -153,6 +151,11 @@ protected:
             set_input_spike(nSpatialZones * 2 + indvxBall);
             set_input_spike(nSpatialZones * 2 + nVelocityZones + indvyBall);
             set_input_spike(nSpatialZones * 2 + nVelocityZones * 2 + indRacket);
+
+            static ofstream ofsStateDiscrete("ping_pong_state_discrete.csv");
+            if (ofsStateDiscrete.is_open()) 
+                ofsStateDiscrete << ntact << ',' << indxBall << ',' << indyBall << ',' << indvxBall << ',' << indvyBall << ',' << indRacket << endl;
+
         } else --InputBlockCounter;
         copy(vfl_.begin(), vfl_.end(), pfl);
 

@@ -1,22 +1,16 @@
 cmake_minimum_required(VERSION 3.14)
 # set(CMAKE_CXX_COMPILER "/usr/bin/g++")
 
-project(ping-pong-environment CXX)
+project(WorldModelTest CXX)
 
 add_library(${PROJECT_NAME} SHARED
-  ping-pong-environment-rec.cpp
-  ping-pong-environment-rea.cpp
-  ping-pong-environment-ver.cpp
-  UpdateWorld.cpp
-  AdaptiveSpikeSource.cpp
-  EnvironmentState.cpp
+  WorldModelTestRec.cpp
+  WorldModelTestRea.cpp
+  WorldModelTest.hpp
   ../ping-pong-environment.h
-  EnvironmentState.hpp
-  AdaptiveSpikeSource.hpp
-  ../../pugixml-1.10/src/pugixml.cpp
 )
 
-set(ROOT_NAMESPACE ping-pong-environment)
+set(ROOT_NAMESPACE WorldModelTest)
 
 ################################################################################
 # Output directory
@@ -33,7 +27,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
     "FOR_LINUX"
     "NDEBUG"
     "_USRDLL"
-    "PINGPONGENVIRONMENT_EXPORTS"
+    "WORLDMODELTEST_EXPORTS"
 )
 
 target_compile_options(${PROJECT_NAME} PRIVATE
@@ -50,6 +44,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
         boost_thread
 	pthread
 	rt
+	ArNIUtilities
         )
 
                        

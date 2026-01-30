@@ -50,6 +50,8 @@
 		<maxweightcont>$(MAXWEIGHTCONT)</maxweightcont>
 	      	<stability_resource_change_ratio_enter>$(STABILITYRESOURCECHANGERATIOENTER)</stability_resource_change_ratio_enter>
 	      	<stability_resource_change_ratio_cont>$(STABILITYRESOURCECHANGERATIOCONT)</stability_resource_change_ratio_cont>
+	      	<onefactorplasticityenter>$(ONEFACTORPLASTICITYENTER)</onefactorplasticityenter>
+	      	<onefactorplasticitycont>$(ONEFACTORPLASTICITYCONT)</onefactorplasticitycont>
                 <nsilentsynapses>$(NSILENTSYNAPSES)</nsilentsynapses>
                 <chartimeenter>$(CHARTIMEENTER)</chartimeenter>
                 <chartimecont>$(CHARTIMECONT)</chartimecont>
