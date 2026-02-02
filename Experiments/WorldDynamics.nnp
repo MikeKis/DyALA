@@ -33,7 +33,6 @@
     <Implementation lib="DyALA">
     	<args>
     		<input>MEMORYT</input>
-    		<additional_input>Actions</additional_input>
     		<input_time_periods>4</input_time_periods>
     		<nmicrocolumnsenter>$(NLEARNINGGROUPSENTER)</nmicrocolumnsenter>
     		<nmicrocolumnscont>$(NLEARNINGGROUPSCONT)</nmicrocolumnscont>
@@ -48,6 +47,12 @@
 		<maxweightenter>$(MAXWEIGHTENTER)</maxweightenter>
 		<minweightcont>$(MINWEIGHTCONT)</minweightcont>
 		<maxweightcont>$(MAXWEIGHTCONT)</maxweightcont>
+		<aenter>$(AENTER)</aenter>
+		<benter>$(BENTER)</benter>
+		<steps_to_hinge_enter>$(STEPS_TO_HINGE_ENTER)</steps_to_hinge_enter>
+		<acont>$(ACONT)</acont>
+		<bcont>$(BCONT)</bcont>
+		<steps_to_hinge_cont>$(STEPS_TO_HINGE_CONT)</steps_to_hinge_cont>
 	      	<stability_resource_change_ratio_enter>$(STABILITYRESOURCECHANGERATIOENTER)</stability_resource_change_ratio_enter>
 	      	<stability_resource_change_ratio_cont>$(STABILITYRESOURCECHANGERATIOCONT)</stability_resource_change_ratio_cont>
 	      	<onefactorplasticityenter>$(ONEFACTORPLASTICITYENTER)</onefactorplasticityenter>
