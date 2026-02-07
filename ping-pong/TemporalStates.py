@@ -26,7 +26,7 @@ tactcnt = [0 for i in nStates]
 LastState = [-1 for i in nStates]
 LastCompleteState = [0 for i in range(offset[-1])]
 NewCompleteStates = []
-nTargets = sum(nStates[:-1])
+nTargets = sum(nStates[:-1]) * nPeriods
 with open(filein, newline = '') as filin:
     csr = csv.reader(filin)
     for row in csr:
@@ -86,8 +86,8 @@ def SymbolicState(CompleteState):
         ind = i
         while CompleteState[ind] == 0:
             ind += 1
-        v = ind // nPeriods
-        t = ind - v * nPeriods
+        v = (ind - i) // nPeriods
+        t = ind - i - v * nPeriods
         ret.append([v, t])
     return ret
 
