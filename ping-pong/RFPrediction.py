@@ -10,8 +10,10 @@ import random
 import numpy as np
 from ReadStateChanges import ReadStateChanges
 
+wd = "/home/mike/E/DyALA/Workplace/"
 filemodel = 'RFpingpongdynamics.joblib'
 filein = "ping_pong_state_discrete.csv"
+fileout = "RFPredictonResults.csv"
 nTests = 3000
 
 nPeriods = 4
@@ -22,9 +24,10 @@ offset = [0]
 for i in range(len(nStates)):
     offset.append(offset[-1] + nStates[i] * nPeriods)
 
-Predictors = joblib.load(filemodel)    
+print("Loading RF model...")
+Predictors = joblib.load(wd + filemodel)    
 
-NewCompleteStates, nTargets = ReadStateChanges(filein)
+NewCompleteStates, nTargets = ReadStateChanges(wd + filein)
 ntactsperCompleteState = NewCompleteStates[-1][0] / len(NewCompleteStates)
 RacketMovementPeriod = int(RacketMovementPeriod / ntactsperCompleteState)
 OnlyCompleteStates = [i[1] for i in NewCompleteStates]
@@ -90,28 +93,40 @@ def NextCompleteState(Predictors, CompleteState, SymSta):
     NewCompleteState[offset[-2] + SymSta[-1][0] * nPeriods + j] = 1
     return NewCompleteState, SymbolicState(NewCompleteState)
 
-res = []
-for i in range(nTests):
-    start = int(random.random() * len(OnlyCompleteStates))
-    StartingState = OnlyCompleteStates[start]
-    SymSta = SymbolicState(StartingState)
-    if SymSta[0][0] != 0:
-        j = start + 1
-        while j < len(OnlyCompleteStates) and SymbolicState(OnlyCompleteStates[j])[0][0] != 0:
-            j += 1
-        if j < len(OnlyCompleteStates):
-            yreal = SymbolicState(OnlyCompleteStates[j])[1][0]
-            tactcnt = [0 for i in nStates]
-            tactcntRacket = 0
-            k = 0
-            while SymSta[0][0] != 0 and k < 3000:
-                StartingState, SymSta = NextCompleteState(Predictors, StartingState, SymSta)
-                k += 1
-            if k == 3000:
-                print("no prediction")
-                ypred = -1
-            else: 
-                ypred = SymSta[1][0]
-            res.append([yreal, ypred])
-    
-print(res)
+with open(wd + fileout, "wt", buffering=1) as filout:
+    filout.write("real,pred\n");    
+    res = []
+    for i in range(nTests):
+        start = int(random.random() * len(OnlyCompleteStates))
+        StartingState = OnlyCompleteStates[start]
+        SymSta = SymbolicState(StartingState)
+        if SymSta[0][0] != 0:
+            j = start + 1
+            while j < len(OnlyCompleteStates) and SymbolicState(OnlyCompleteStates[j])[0][0] != 0:
+                j += 1
+            if j < len(OnlyCompleteStates):
+                yreal = SymbolicState(OnlyCompleteStates[j])[1][0]
+                tactcnt = [0 for i in nStates]
+                tactcntRacket = 0
+                k = 0
+                Visited = set()
+                Cycled = False
+                while SymSta[0][0] != 0 and k < 3000:
+                    print(f"test {i} step {k}")
+                    StartingState, SymSta = NextCompleteState(Predictors, StartingState, SymSta)
+                    t = tuple(tuple(item) for item in SymSta)
+                    if t in Visited:
+                        Cycled = True
+                        break
+                    k += 1
+                    Visited.add(t)
+                if k == 3000 or Cycled:
+                    print("no prediction")
+                    ypred = -1
+                else: 
+                    print(f"steps to prediction: {k}")
+                    ypred = SymSta[1][0]
+                res.append([yreal, ypred])
+                filout.write(f"{yreal},{ypred}\n");    
+        
+    print(res)
