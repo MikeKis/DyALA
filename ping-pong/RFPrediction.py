@@ -8,10 +8,12 @@ Created on Fri Jan 30 15:38:02 2026
 import joblib
 import random
 import numpy as np
+import csv
 from ReadStateChanges import ReadStateChanges
 
-wd = "/home/mike/E/DyALA/Workplace/"
-filemodel = 'RFpingpongdynamics.joblib'
+wd = "/home/mike/DyALA/Workplace/"
+filemodel = "RFpingpongdynamics.joblib"
+fileori = "ping_pong_state.csv"
 filein = "ping_pong_state_discrete.csv"
 fileout = "RFPredictonResults.csv"
 nTests = 3000
@@ -23,6 +25,21 @@ nStates = [30, 30, 9, 9, 30]
 offset = [0]
 for i in range(len(nStates)):
     offset.append(offset[-1] + nStates[i] * nPeriods)
+
+print(f"reading {fileori}...")
+x = []
+y = []
+vx = []
+vy = []
+ry = []
+with open(wd + fileori, newline = '') as fil:
+    csr = csv.reader(fil)
+    for row in csr:
+        x.append(float(row[1]))
+        y.append(float(row[2]))
+        vx.append(float(row[3]))
+        vy.append(float(row[4]))
+        ry.append(float(row[5]))
 
 print("Loading RF model...")
 Predictors = joblib.load(wd + filemodel)    
@@ -94,18 +111,21 @@ def NextCompleteState(Predictors, CompleteState, SymSta):
     return NewCompleteState, SymbolicState(NewCompleteState)
 
 with open(wd + fileout, "wt", buffering=1) as filout:
-    filout.write("real,pred\n");    
+    filout.write("xstart,ystart,vxstart,vystart,rystart,xstartdis,ystartdis,vxstartdis,vystartdis,rystartdis,real,realdis,pred\n");    
     res = []
     for i in range(nTests):
         start = int(random.random() * len(OnlyCompleteStates))
+        tactstart = NewCompleteStates[start][0]
         StartingState = OnlyCompleteStates[start]
         SymSta = SymbolicState(StartingState)
+        StartingStateDis = [i[0] for i in SymSta]
         if SymSta[0][0] != 0:
             j = start + 1
             while j < len(OnlyCompleteStates) and SymbolicState(OnlyCompleteStates[j])[0][0] != 0:
                 j += 1
             if j < len(OnlyCompleteStates):
-                yreal = SymbolicState(OnlyCompleteStates[j])[1][0]
+                yreal = y[NewCompleteStates[start][0]]
+                yrealdis = SymbolicState(OnlyCompleteStates[j])[1][0]
                 tactcnt = [0 for i in nStates]
                 tactcntRacket = 0
                 k = 0
@@ -127,6 +147,6 @@ with open(wd + fileout, "wt", buffering=1) as filout:
                     print(f"steps to prediction: {k}")
                     ypred = SymSta[1][0]
                 res.append([yreal, ypred])
-                filout.write(f"{yreal},{ypred}\n");    
+                filout.write(f"{x[tactstart]},{y[tactstart]},{vx[tactstart]},{vy[tactstart]},{ry[tactstart]},{StartingStateDis[0]},{StartingStateDis[1]},{StartingStateDis[2]},{StartingStateDis[3]},{StartingStateDis[4]},{yreal},{yrealdis},{ypred}\n");    
         
     print(res)

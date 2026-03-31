@@ -12,7 +12,7 @@ from ReadStateChanges import ReadStateChanges
 filein = "ping_pong_state_discrete.csv"
 fileout = "ping_pong_state_changes.csv"
 filemodel = 'RFpingpongdynamics.joblib'
-RFmaxdepth = 30
+RFmaxdepth = 10
 RacketMovementPeriod = 17.74622
 
 NewCompleteStates, nTargets = ReadStateChanges(filein)
