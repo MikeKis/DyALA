@@ -69,9 +69,7 @@
 			<n>2</n>
 		</props>
 	</Section>
-	<Link from="RandomActions" to="N" policy="aligned">
-	      <weight>10</weight>
-	</Link>
+	<Link from="RandomActions" to="N" policy="aligned"></Link>
     </Sections>
   </NETWORK>
    <Readout lib="ping-pong-environment">
