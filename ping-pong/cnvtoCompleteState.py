@@ -13,7 +13,7 @@ fileout = "ping_pong_state_complete.csv"
 nPeriods = 4
 minPeriod = 10
 print("Reading " + filein + "...")
-nStates = [30, 30, 9, 9]   # without racket y
+nStates = [30, 30, 9, 9, 30]
 
 tactcnt = [0 for i in nStates]
 LastState = [-1 for i in nStates]
@@ -21,7 +21,7 @@ with open(wd + filein, newline = '') as filin, open(wd + fileout, "wt") as filou
     csr = csv.reader(filin)
     for row in csr:
         tact = int(row[0])
-        CurrentState = [int(i) for i in row[1:-1]]   # row[0] - tact, row[-1] - Yracket
+        CurrentState = [int(i) for i in row[1:]]   # row[0] - tact
         for i in range(len(nStates)):
            tactcnt[i] = 1 if CurrentState[i] != LastState[i] else tactcnt[i] + 1
         CurrentCompleteState = [[0, 0] for i in range(len(nStates))]   
