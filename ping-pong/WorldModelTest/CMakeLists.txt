@@ -4,9 +4,9 @@ cmake_minimum_required(VERSION 3.14)
 project(WorldModelTest CXX)
 
 add_library(${PROJECT_NAME} SHARED
-  WorldModelTestRec.cpp
-  WorldModelTestRea.cpp
   WorldModelTest.hpp
+  WorldModelTestRea.cpp
+  WorldModelTestRec.cpp
   ../ping-pong-environment.h
 )
 

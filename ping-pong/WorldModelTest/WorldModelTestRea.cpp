@@ -25,12 +25,10 @@ READOUT_SET_PARAMETERS(ExperimentId, tactTermination, nOutputNeurons, xn){}
 
 READOUT_OBTAIN_SPIKES(v_Firing)
 {
-	for (auto i: v_Firing) {
-		if (!(*pwmtG)[i])
-			pwmtG->change_to(i);
-	}
+    for (auto i: v_Firing)
+        pwmtG->change_to(i);
 	return true;
 }
 
-READOUT_FINALIZE(OriginalTerminationCode, filGenLog){return -1;}
+READOUT_FINALIZE(OriginalTerminationCode, filGenLog){return !pwmtG->vp_CurrentCompleteState[1].first ? pwmtG->vp_CurrentCompleteState[1].first : 3000;}
 DYNAMIC_LIBRARY_ENTRY_POINT void Serialize(Serializer &ser, bool bSave) {}
