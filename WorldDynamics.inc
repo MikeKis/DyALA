@@ -7,6 +7,7 @@
 #define MAXEMULATIONTIME 2000000
 #define SECOND_TEST_THRESHOLD 0x7fffffff   // DO NOT USE PROTOCOL POSTPROCESSOR !!
 #define LEARNINGGROUPSIZE 1                // because afferent connections are all-to-all
+#define LEARNING_TIME 1400000
 //------------------------------------------------------------------------------------------------
 
 NetworkTestingParams ntpG{EMULATOR, RECOGNIZER, SECOND_TEST_THRESHOLD, NoStructuralCriterion};
@@ -149,7 +150,7 @@ EVALUATOR
 			vstr_argsEmulator[3] = buf + 300;
 //------------------------------------------------------------------------------------------------
 // Set additional simulator command line options. 
-//			vstr_argsEmulator.push_back("-f" + str(LEARNING_TIME));
+                        vstr_argsEmulator.push_back("-f" + str(LEARNING_TIME));
 //------------------------------------------------------------------------------------------------
 #ifndef USE_CPU
 			sprintf(buf + 100, "-C%d", SelectedDevice);

@@ -52,7 +52,7 @@ WorldModelTest::WorldModelTest(const pugi::xml_node& xn, int nRec)
     // GetAllParameters(xn, "period", &period, "depth", &depth, "spikes_file", &strSpikesInFile);
     // ifsspikein.open(strSpikesInFile.c_str());
     // ofsout.open("WorldModelTest.csv");
-    const char* apchReceptorSection[] = { "x", "y", "vx", "vy", "ry" };
+    const char *apchReceptorSection[] = { "x", "y", "vx", "vy", "ry" };
     int i = 0;
     int ReceptorSection = 0;
     vstr_MyMeanings.resize(GetNReceptors());
@@ -82,10 +82,10 @@ DYNAMIC_LIBRARY_ENTRY_POINT IReceptors *LoadStatus(Serializer &ser)
 
 bool WorldModelTest::bGenerateSignals(unsigned* pfl, int bitoffset)
 {
+    static int ntact = 0;
     if (bReset) {
-        int indstart;
-        cin >> indstart;
-//        tactStart = vptactvp_CompleteStates[indstart].first;
+        int indstart = 0;
+//        cin >> indstart;
         vp_CurrentCompleteState = vptactvp_CompleteStates[indstart].second;
         bReset = false;
     }
@@ -95,7 +95,7 @@ bool WorldModelTest::bGenerateSignals(unsigned* pfl, int bitoffset)
     FORI(vp_CurrentCompleteState.size())
         pflMy |= BitMaskAccess((aindReceptorSection[_i] + vp_CurrentCompleteState[_i].first) * nPeriods + vp_CurrentCompleteState[_i].second);
     copy(vfl_InputSignal.begin(), vfl_InputSignal.end(), pfl);
-    return true;
+    return ++ntact < 3000;
 }
 
 void WorldModelTest::change_to(int indrec)

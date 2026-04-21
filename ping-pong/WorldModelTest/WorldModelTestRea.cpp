@@ -30,5 +30,5 @@ READOUT_OBTAIN_SPIKES(v_Firing)
 	return true;
 }
 
-READOUT_FINALIZE(OriginalTerminationCode, filGenLog){return !pwmtG->vp_CurrentCompleteState[1].first ? pwmtG->vp_CurrentCompleteState[1].first : 3000;}
+READOUT_FINALIZE(OriginalTerminationCode, filGenLog){return !pwmtG->vp_CurrentCompleteState[0].first ? pwmtG->vp_CurrentCompleteState[1].first : 3000;}
 DYNAMIC_LIBRARY_ENTRY_POINT void Serialize(Serializer &ser, bool bSave) {}
