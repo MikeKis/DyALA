@@ -85,7 +85,7 @@ bool WorldModelTest::bGenerateSignals(unsigned* pfl, int bitoffset)
     static int ntact = 0;
     if (bReset) {
         int indstart = 0;
-//        cin >> indstart;
+        cin >> indstart;
         vp_CurrentCompleteState = vptactvp_CompleteStates[indstart].second;
         bReset = false;
     }
