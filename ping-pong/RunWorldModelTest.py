@@ -23,7 +23,7 @@ with open(fileres, "w") as filres:
     while test < nTests:
         nr = df.shape[0]
         indstart = random.randint(0, nr - 1)
-        if df.iat[indstart, 1] > 0:
+        if df.iat[indstart, 1] > 0 and df.iat[indstart, 5] < 4:
             indfinish = indstart + 1
             while indfinish < nr and df.iat[indfinish, 1] > 0:
                 indfinish += 1
