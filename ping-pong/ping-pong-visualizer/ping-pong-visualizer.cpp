@@ -6,7 +6,7 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <SFML/Graphics.hpp>
 
-#include "../environment/ping-pong-environment.h"
+#include "../ping-pong-environment.h"
 
 #define RASTER_SIZE 200   // It is for the range [0, 1] while the whole picture range is [-1, 1].
 #define SPOT_HALFSIZE_PIXEL 10
