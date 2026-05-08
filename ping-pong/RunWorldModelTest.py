@@ -15,7 +15,7 @@ fileres = "WorldDynamicsModel.res"
 
 nTests = 3000
 
-df = pd.read_csv(filestates)
+df = pd.read_csv(filestates, index_col=False, header=None)
 
 with open(fileres, "w") as filres:
     filres.write("tactstart,tactfinish,yreal,ypred\n")
@@ -43,7 +43,7 @@ with open(fileres, "w") as filres:
                 except:
                     print("Cannot run ArNIGPU!")
                     exit(-1)
-                filres.write(f"{indstart},{indfinish},{ground_truth},{res}\n")
+                filres.write(f"{df.iat[indstart, 0]},{df.iat[indfinish, 0]},{ground_truth},{res}\n")
                 test += 1
                 print(test, " tests...")
                 filres.flush()
