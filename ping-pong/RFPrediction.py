@@ -9,6 +9,8 @@ import joblib
 import random
 import numpy as np
 import csv
+import pandas as pd
+import os
 from ReadStateChanges import ReadStateChanges
 
 wd = "/home/mike/DyALA/Workplace/"
@@ -16,7 +18,9 @@ filemodel = "RFpingpongdynamics.joblib"
 fileori = "ping_pong_state.csv"
 filein = "ping_pong_state_discrete.csv"
 fileout = "RFPredictonResults.csv"
-nTests = 3000
+fileSNNres = "WorldDynamicsModel.res"
+
+dfSNNres = pd.read_csv(wd + fileSNNres, index_col=False)
 
 nPeriods = 4
 minPeriod = 10
@@ -110,21 +114,32 @@ def NextCompleteState(Predictors, CompleteState, SymSta):
     NewCompleteState[offset[-2] + SymSta[-1][0] * nPeriods + j] = 1
     return NewCompleteState, SymbolicState(NewCompleteState)
 
-with open(wd + fileout, "wt", buffering=1) as filout:
-    filout.write("xstart,ystart,vxstart,vystart,rystart,xstartdis,ystartdis,vxstartdis,vystartdis,rystartdis,real,realdis,pred\n");    
-    res = []
-    for i in range(nTests):
-        start = int(random.random() * len(OnlyCompleteStates))
-        tactstart = NewCompleteStates[start][0]
-        StartingState = OnlyCompleteStates[start]
-        SymSta = SymbolicState(StartingState)
-        StartingStateDis = [i[0] for i in SymSta]
-        if SymSta[0][0] != 0:
+fileout = wd + fileout
+bAppend = os.path.exists(fileout)
+
+with open(fileout, "r+t" if bAppend else "wt", buffering=1) as filout:
+    if not bAppend:
+        filout.write("xstart,ystart,vxstart,vystart,rystart,xstartdis,ystartdis,vxstartdis,vystartdis,rystartdis,realdis,pred\n");    
+    else: 
+        filout.readline()
+    test = 0
+    for tactstart in dfSNNres["tactstart"]:
+        if bAppend:
+            s = filout.readline()
+            if len(s) == 0:
+                bAppend = False
+        if not bAppend:
+            start = next(i for i, x in enumerate(NewCompleteStates) if x[0] > tactstart) - 1
+            if start < 0:
+                print(tactstart, " - some problem!")
+                exit(-1)
+            StartingState = OnlyCompleteStates[start]
+            SymSta = SymbolicState(StartingState)
+            StartingStateDis = [i[0] for i in SymSta]
             j = start + 1
             while j < len(OnlyCompleteStates) and SymbolicState(OnlyCompleteStates[j])[0][0] != 0:
                 j += 1
             if j < len(OnlyCompleteStates):
-                yreal = y[NewCompleteStates[start][0]]
                 yrealdis = SymbolicState(OnlyCompleteStates[j])[1][0]
                 tactcnt = [0 for i in nStates]
                 tactcntRacket = 0
@@ -132,7 +147,7 @@ with open(wd + fileout, "wt", buffering=1) as filout:
                 Visited = set()
                 Cycled = False
                 while SymSta[0][0] != 0 and k < 3000:
-                    print(f"test {i} step {k}")
+                    print(f"test {test} step {k}")
                     StartingState, SymSta = NextCompleteState(Predictors, StartingState, SymSta)
                     t = tuple(tuple(item) for item in SymSta)
                     if t in Visited:
@@ -146,7 +161,9 @@ with open(wd + fileout, "wt", buffering=1) as filout:
                 else: 
                     print(f"steps to prediction: {k}")
                     ypred = SymSta[1][0]
-                res.append([yreal, ypred])
-                filout.write(f"{x[tactstart]},{y[tactstart]},{vx[tactstart]},{vy[tactstart]},{ry[tactstart]},{StartingStateDis[0]},{StartingStateDis[1]},{StartingStateDis[2]},{StartingStateDis[3]},{StartingStateDis[4]},{yreal},{yrealdis},{ypred}\n");    
-        
-    print(res)
+                filout.write(f"{x[tactstart]},{y[tactstart]},{vx[tactstart]},{vy[tactstart]},{ry[tactstart]},{StartingStateDis[0]},{StartingStateDis[1]},{StartingStateDis[2]},{StartingStateDis[3]},{StartingStateDis[4]},{yrealdis},{ypred}\n");    
+            else:
+                print(tactstart, " - another problem!")
+                exit(-1)
+        test += 1
+            
