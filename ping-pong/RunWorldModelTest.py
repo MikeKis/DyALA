@@ -37,6 +37,9 @@ with open(fileres, "w") as filres:
                         exit(-1)
                     try:
                         res = int(errs[4:])
+                        if res < 0:
+                            print("Negative ArNIGPU result!")
+                            exit(-1)
                     except:
                         print("Unexpected ArNIGPU result!")
                         exit(-1)
