@@ -82,7 +82,6 @@ DYNAMIC_LIBRARY_ENTRY_POINT IReceptors *LoadStatus(Serializer &ser)
 
 bool WorldModelTest::bGenerateSignals(unsigned* pfl, int bitoffset)
 {
-    static int ntact = 0;
     if (bReset) {
         int indstart = 0;
         cin >> indstart;
@@ -109,4 +108,5 @@ void WorldModelTest::change_to(int indrec)
         vp_CurrentCompleteState[ReceptorSection] = p_NewState;
         vp_CurrentCompleteState[4] = vptactvp_CompleteStates[ran(vptactvp_CompleteStates.size())].second[4];   // Yracket every time is set randomly.
     }
+    ++nhops;
 }
