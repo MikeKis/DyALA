@@ -31,7 +31,9 @@ vmaxnopred = max(np.max(no_prediction), np.max(no_prediction_RF))
 norm = mpl.colors.Normalize(vmin = vmin, vmax = vmax)
 normnopred = mpl.colors.Normalize(vmin = 0, vmax = vmaxnopred)
 
-fig, axs = plt.subplots(5)
+mpl.rc('font', size=20)
+
+fig, axs = plt.subplots(5,  layout='constrained')
 im = axs[0].imshow(no_prediction, cmap = 'seismic', norm=normnopred)
 axs[0].set_title("part of endless loops (SNN)")
 fig.colorbar(im, ax = axs[0])
