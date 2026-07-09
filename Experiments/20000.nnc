@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SNN>
+  <RECEPTORS name="R" n="432">
+    <Implementation lib="WorldModelTest"></Implementation>
+  </RECEPTORS>
+  <NETWORK saved="WorldDynamicsModel.upper.snn.csv"></NETWORK>
+  <Readout lib="WorldModelTest">
+    <output>OUTtotal</output>
+  </Readout>
+</SNN>  

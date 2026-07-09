@@ -11,7 +11,7 @@ import random
 import subprocess
 
 filestates = "ping_pong_state_complete.csv"
-fileres = "WorldDynamicsModel.res"
+fileres = "WorldDynamicsModel.SNN.res"
 
 nTests = 3000
 
@@ -30,7 +30,7 @@ with open(fileres, "w") as filres:
             if indfinish < nr:
                 ground_truth = df.iat[indfinish, 3]
                 try:
-                    p = subprocess.Popen(["./ArNIGPU", "../Experiments", "-e20000"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, text=True)
+                    p = subprocess.Popen(["./ArNIGPU", "../Experiments", "-e20001"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, text=True)
                     outs, errs = p.communicate(str(indstart) + '\n')
                     if p.returncode != 0 or len(errs) == 0 or errs[:4] != 'ArNI':
                         print("Abnormal ArNIGPU termination!")
