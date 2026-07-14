@@ -68,8 +68,8 @@ bool WorldModelTest::bGenerateSignals(unsigned *pfl, int bitoffset)
         case 0: {
                     vector<unsigned> vfl_InputSignal(AfferentSpikeBufferSizeDW(GetNReceptors()), 0);
                     auto pflMy = &vfl_InputSignal.front();
-                    int indstart = 0;
-                    cin >> indstart;
+                    int indstart = 1570289;
+//                    cin >> indstart;
                     auto vp_CurrentCompleteState = vptactvp_CompleteStates[indstart].second;
                     FORI(vp_CurrentCompleteState.size())
                         pflMy |= BitMaskAccess((aindReceptorSection[_i] + vp_CurrentCompleteState[_i].first) * nPeriods + vp_CurrentCompleteState[_i].second);
@@ -81,7 +81,7 @@ bool WorldModelTest::bGenerateSignals(unsigned *pfl, int bitoffset)
                 break;
         default: break;
     }
-    return ntact < 3000 || bLeftWallReached;
+    return ntact < 3000 && !bLeftWallReached;
 }
 
 void WorldModelTest::change_to(int indrec)
